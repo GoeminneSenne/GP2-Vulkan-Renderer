@@ -48,19 +48,20 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES})
 
 # --- DEFINE SHADER COMPILATION AS BUILDING STEP OF PROJECT ---
 file(GLOB_RECURSE SHADERS
-	"${CMAKE_SOURCE_DIR}/resources/shaders/*.frag"
-	"${CMAKE_SOURCE_DIR}/resources/shaders/*.vert"
-	"${CMAKE_SOURCE_DIR}/resources/shaders/*.comp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/*.frag"
+	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/*.vert"
+	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/*.comp"
 )
 message("Found shaders: ${SHADERS}")
+message("Source dir: ${CMAKE_SOURCE_DIR}")
 
 set(SPIRV_FILES)
 foreach(shader ${SHADERS})
 	# Get the relative path from the shaders directory
-	file(RELATIVE_PATH relPath ${CMAKE_SOURCE_DIR}/resources/shaders ${shader})
+	file(RELATIVE_PATH relPath ${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders ${shader})
 
 	# Append .spv extension
-	set(outputFile "${CMAKE_SOURCE_DIR}/resources/shaders/${relPath}.spv")
+	set(outputFile "${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/${relPath}.spv")
 
 	# Ensure the output directory exists
 	get_filename_component(outputDir ${outputFile} DIRECTORY)
@@ -69,12 +70,12 @@ foreach(shader ${SHADERS})
 	# Add command to compile -> (-g flag is to include debug info)
 	add_custom_command(
 		OUTPUT ${outputFile}
-		COMMAND glslangValidator -V -g ${shader} -I${CMAKE_SOURCE_DIR}/resources/shaders/ -o ${outputFile}
+		COMMAND glslangValidator -V -g ${shader} -I${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/ -o ${outputFile}
 		DEPENDS ${shader}
 		COMMENT "Compiling GLSL shader ${filename} to SPIR-V"
 		VERBATIM
 	)
-
+	
 	list(APPEND SPIRV_FILES ${outputFile}) #add files for dependency
 endforeach()
 
@@ -84,8 +85,16 @@ add_custom_target(CompileShaders ALL DEPENDS ${SPIRV_FILES})
 add_dependencies(${PROJECT_NAME} CompileShaders)
 
 # Custom target to copy resources folder
-add_custom_target(CopyResources ALL DEPENDS CompileShaders
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	"${CMAKE_SOURCE_DIR}/resources"
-	"$<TARGET_FILE_DIR:${PROJECT_NAME}>/resources"
-	COMMENT "Copying resources folder to build directory")
+#add_custom_target(CopyResources ALL DEPENDS CompileShaders
+#	COMMAND ${CMAKE_COMMAND} -E copy_directory
+#	"${CMAKE_CURRENT_SOURCE_DIR}/resources"
+#	"$<TARGET_FILE_DIR:${PROJECT_NAME}>/resources"
+#	COMMENT "Copying resources folder to build directory")
+
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/resources"
+    COMMENT "Copying resources folder to build directory"
+)
