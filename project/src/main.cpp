@@ -15,7 +15,7 @@
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
 
-constexpr static int MAX_FRAMES_IN_FLIGHT = 3;
+constexpr static int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
 
@@ -143,8 +143,6 @@ private:
         }
 
         vkDeviceWaitIdle(device);
-        
-        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
     void cleanup() 
@@ -752,6 +750,8 @@ private:
         presentInfo.pResults = nullptr;
 
         vkQueuePresentKHR(presentQueue, &presentInfo);
+
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
     VkShaderModule createShaderModule(const std::vector<char>& code)
