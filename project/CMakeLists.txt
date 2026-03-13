@@ -46,6 +46,17 @@ find_package(Vulkan REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES})
 
+# Vulkan Memory Allocator
+FetchContent_Declare(
+	VulkanMemoryAllocator
+	URL https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.3.0.zip
+	DOWNLOAD_NO_PROGRESS ON
+	DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+)
+FetchContent_MakeAvailable(VulkanMemoryAllocator)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE GPUOpen::VulkanMemoryAllocator)
+
 # --- DEFINE SHADER COMPILATION AS BUILDING STEP OF PROJECT ---
 file(GLOB_RECURSE SHADERS
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/*.frag"
