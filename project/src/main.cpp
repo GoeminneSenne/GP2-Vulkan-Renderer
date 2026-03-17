@@ -164,7 +164,7 @@ private:
     VmaAllocator allocator{};
 
     VkBuffer vertexBuffer{};
-    VmaAllocation vertexAllocation;
+    VmaAllocation vertexAllocation{};
     //VkDeviceMemory vertexBufferMemory{};
 
     void initWindow()
@@ -716,8 +716,87 @@ private:
             throw std::runtime_error("failed to create vma allocator!");
     }
 
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+        VkBuffer& buffer, VmaAllocation& allocation)
+    {
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = size;
+        bufferInfo.usage = usage;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        /*
+        if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
+            throw std::runtime_error("failed to create buffer!");
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize = memRequirements.size;
+        allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS)
+            throw std::runtime_error("failed to allocate buffer memory");
+
+        vkBindBufferMemory(device, buffer, bufferMemory, 0);
+        */
+        
+    	
+        //TODO should this usage & flags also be parameters
+    	VmaAllocationCreateInfo allocInfo{};
+        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        
+    	//TODO: ask if these flags should be same as usage and/or how?
+    	//allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        //allocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        
+
+        if (vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS)
+            throw std::runtime_error("failed to allocate buffer!");
+    }
+
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+    {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.srcOffset = 0;
+        copyRegion.dstOffset = 0;
+        copyRegion.size = size;
+        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+        vkEndCommandBuffer(commandBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(graphicsQueue);
+
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    }
+
     void createVertexBuffer()
     {
+        /*
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = sizeof(vertices[0]) * vertices.size();
@@ -725,7 +804,7 @@ private:
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     
-
+        //Old
         /*
     	if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS)
             throw std::runtime_error("failed to create vertex buffer!");
@@ -746,6 +825,7 @@ private:
 		}
 		*/
 
+        /*
         VmaAllocationCreateInfo allocInfo{};
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
@@ -757,13 +837,32 @@ private:
 
 
         //vmaBindBufferMemory(allocator, vertexAllocation, vertexBuffer);
+        */
+        
+        VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+        
+        VkBuffer stagingBuffer;
+        VmaAllocation stagingBufferAllocation;
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer, stagingBufferAllocation);
+    	
+    	//createBuffer(bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+       //    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+       //    vertexBuffer, vertexAllocation);
 
-        
         void* data;
-        vmaMapMemory(allocator, vertexAllocation, &data);
-        memcpy(data, vertices.data(), (size_t)bufferInfo.size);
-        vmaUnmapMemory(allocator, vertexAllocation);
+        vmaMapMemory(allocator, stagingBufferAllocation, &data);
+        memcpy(data, vertices.data(), (size_t)bufferSize);
+        vmaUnmapMemory(allocator, stagingBufferAllocation);
         
+        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            vertexBuffer, vertexAllocation);
+
+        copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+        vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
+
+        //Old
         /*
     	vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
 
@@ -773,9 +872,7 @@ private:
         vkUnmapMemory(device, vertexBufferMemory);
 		*/
 
-        //Debugging
-        vmaSetAllocationName(allocator, vertexAllocation, "VertexBuffer");
-    }
+        }
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
     {
