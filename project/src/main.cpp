@@ -21,6 +21,10 @@
 #define VMA_DEBUG_LOG_FORMAT
 #include <vk_mem_alloc.h>
 
+//STB Image include
+//TODO: this should be handled in CMAKE in the end
+#include "stb_image.h"
+
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
 
