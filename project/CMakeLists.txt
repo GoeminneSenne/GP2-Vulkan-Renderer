@@ -57,6 +57,15 @@ FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE GPUOpen::VulkanMemoryAllocator)
 
+# STB
+#Fetchcontent van stb
+
+#target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR}
+# en dan includen in project
+#best specifieke verion downloaden
+# GIT_SHALLOW TRUE
+
+
 # --- DEFINE SHADER COMPILATION AS BUILDING STEP OF PROJECT ---
 file(GLOB_RECURSE SHADERS
 	"${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/*.frag"
