@@ -39,7 +39,7 @@
 
 //Project Include
 ////////////////////
-#include "Image.h"
+#include "Window.h"
 #include "Vertex.h"
 
 using namespace dae;
@@ -189,8 +189,6 @@ private:
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VmaAllocation> uniformBuffersAllocation;
     std::vector<void*> uniformBuffersMapped;
-
-    dae::Image texture{};
 
     uint32_t mipLevels{};
     VkImage textureImage{};
