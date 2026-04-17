@@ -37,7 +37,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../inc/tiny_obj_loader.h"
 
-//Project Include
+//Project Includes
 ////////////////////
 #include "Window.h"
 #include "Vertex.h"

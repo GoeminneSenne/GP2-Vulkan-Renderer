@@ -22,9 +22,9 @@ bool dae::Window::ShouldClose() const
 
 bool dae::Window::WasResized()
 {
-	bool resized = m_wasResized;
+	bool value = m_wasResized;
 	m_wasResized = false;
-	return resized;
+	return value;
 }
 
 GLFWwindow* dae::Window::GetGLFWwindow() const
