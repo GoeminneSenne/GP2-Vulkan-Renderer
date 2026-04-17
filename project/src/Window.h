@@ -16,7 +16,8 @@ namespace dae
 		void PollEvents() const;
 		
 		bool ShouldClose() const;
-		bool WasResize() const;
+		//Immediately resets m_wasResized back to false, since window resizing is similar to an event that needs to be processed once
+		bool WasResized();
 		GLFWwindow* GetGLFWwindow() const;
 
 		Window(const Window& other) = delete;
