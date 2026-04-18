@@ -130,8 +130,6 @@ private:
 
     Instance m_instance{};
 
-    VkSurfaceKHR surface{nullptr};
-
     VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
     VkDevice device{nullptr};
 
@@ -188,7 +186,6 @@ private:
     void initVulkan() 
 	{
         createInstance();
-        createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapChain();
@@ -264,11 +261,6 @@ private:
         vkDestroyCommandPool(device, commandPool, nullptr);
 
         vkDestroyDevice(device, nullptr);
-
-        if constexpr (enableValidationLayers)
-            m_instance.debugTable.vkDestroyDebugUtilsMessengerEXT(m_instance.instance, m_instance.debugMessenger, nullptr);
-
-        vkDestroySurfaceKHR(m_instance.instance, surface, nullptr);
     }
 
     void createInstance()
@@ -284,14 +276,10 @@ private:
             .UseValidation(true)
             .AddValidationLayer("VK_LAYER_KHRONOS_validation")
             .Build(m_instance);
-    }
-    	
 
-    void createSurface()
-    {
-        if (glfwCreateWindowSurface(m_instance.instance, m_window.window, nullptr, &surface) != VK_SUCCESS)
-            throw std::runtime_error("failed to create window surface!");
+        m_instance.CreateSurface(m_window);
     }
+
 
     void createLogicalDevice()
     {
@@ -384,7 +372,7 @@ private:
 
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = surface;
+        createInfo.surface = m_instance.surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -1597,24 +1585,24 @@ private:
 	{
         SwapChainSupportDetails details;
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_instance.surface, &details.capabilities);
 
         uint32_t formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_instance.surface, &formatCount, nullptr);
 
         if (formatCount != 0)
         {
             details.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+            vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_instance.surface, &formatCount, details.formats.data());
         }
 
         uint32_t presentModeCount;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_instance.surface, &presentModeCount, nullptr);
 
         if (presentModeCount != 0)
         {
             details.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+            vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_instance.surface, &presentModeCount, details.presentModes.data());
         }
 
         return details;
@@ -1658,7 +1646,7 @@ private:
 	        }
 
             VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_instance.surface, &presentSupport);
 
             if (presentSupport)
             {
@@ -1755,6 +1743,7 @@ private:
         return buffer;
     }
 
+    /*
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -1765,6 +1754,7 @@ private:
 
         return VK_FALSE;
     }
+    */
 };
 
 int main() {
