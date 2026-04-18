@@ -41,6 +41,7 @@
 ////////////////////
 #include "Window.h"
 #include "Vertex.h"
+#include "VulkanLoader.h"
 
 using namespace dae;
 
