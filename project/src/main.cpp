@@ -46,6 +46,10 @@
 #include "VulkanLoader.h"
 #include "Instance.h"
 #include "InstanceBuilder.h"
+#include "PhysicalDeviceSelector.h"
+#include "PhysicalDevice.h"
+#include "Common.h"
+#include "QueueFamilyIndices.h"
 
 using namespace dae;
 
@@ -67,16 +71,7 @@ constexpr static bool enableValidationLayers = false;
 constexpr static bool enableValidationLayers = true;
 #endif
 
-struct QueueFamilyIndices
-{
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
 
-    bool isComplete() const
-    {
-        return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-};
 
 struct SwapChainSupportDetails
 {
@@ -130,7 +125,9 @@ private:
 
     Instance m_instance{};
 
-    VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
+    PhysicalDevice m_physicalDevice{};
+
+    //VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
     VkDevice device{nullptr};
 
     VkQueue graphicsQueue{nullptr};
@@ -185,8 +182,8 @@ private:
 
     void initVulkan() 
 	{
-        createInstance();
-        pickPhysicalDevice();
+        CreateInstance();
+        PickPhysicalDevice();
         createLogicalDevice();
         createSwapChain();
         createImageViews();
@@ -263,7 +260,7 @@ private:
         vkDestroyDevice(device, nullptr);
     }
 
-    void createInstance()
+    void CreateInstance()
     {
         
         InstanceBuilder instanceBuilder = {};
@@ -273,7 +270,7 @@ private:
             .SetEngineName("No Engine")
             .SetEngineVersion(VK_MAKE_VERSION(1, 0, 0))
             .SetApiVersion(VK_API_VERSION_1_0)
-            .UseValidation(true)
+            .UseValidation(enableValidationLayers)
             .AddValidationLayer("VK_LAYER_KHRONOS_validation")
             .Build(m_instance);
 
@@ -332,8 +329,14 @@ private:
         vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
     }
 
-    void pickPhysicalDevice()
+    void PickPhysicalDevice()
     {
+        PhysicalDeviceSelector physicalDeviceSelector = {};
+        physicalDeviceSelector
+            .AddDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
+            .PickPhysicalDevice(m_instance, m_physicalDevice);
+
+        /*
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(m_instance.instance, &deviceCount, nullptr);
 
@@ -354,6 +357,7 @@ private:
 
         if (physicalDevice == VK_NULL_HANDLE)
             throw std::runtime_error("failed to find a suitable GPU");
+		*/
     }
 
     void createSwapChain()
