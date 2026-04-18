@@ -1,7 +1,7 @@
 #Source files
 set(SOURCES
 	"src/main.cpp"
- "src/Window.cpp")
+ "src/Window.cpp" "src/InstanceBuilder.cpp" "src/Instance.cpp")
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
