@@ -22,6 +22,13 @@ namespace dae
 
 		funcTable.vkDestroyDebugUtilsMessengerEXT =
 			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+
+
+		if (funcTable.vkCreateDebugUtilsMessengerEXT == nullptr ||
+			funcTable.vkDestroyDebugUtilsMessengerEXT == nullptr)
+		{
+			throw std::runtime_error("Failed to find Debug messenger Create/Destroy functions!");
+		}
 	}
 
 };
