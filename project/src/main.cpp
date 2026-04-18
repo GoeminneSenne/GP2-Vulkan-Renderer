@@ -358,7 +358,7 @@ private:
 
     void createSurface()
     {
-        if (glfwCreateWindowSurface(instance, m_window.GetGLFWwindow(), nullptr, &surface) != VK_SUCCESS)
+        if (glfwCreateWindowSurface(instance, m_window.window, nullptr, &surface) != VK_SUCCESS)
             throw std::runtime_error("failed to create window surface!");
     }
 
@@ -514,7 +514,7 @@ private:
         int width = 0, height = 0;
         while (width == 0 || height == 0)
         {
-            glfwGetFramebufferSize(m_window.GetGLFWwindow(), &width, &height);
+            glfwGetFramebufferSize(m_window.window, &width, &height);
             glfwWaitEvents();
         }
 
@@ -1585,8 +1585,9 @@ private:
 
         result = vkQueuePresentKHR(presentQueue, &presentInfo);
 
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.WasResized())
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.wasResized)
         {
+            m_window.wasResized = false;
         	recreateSwapChain();
         }
         else if (result != VK_SUCCESS)
@@ -1645,7 +1646,7 @@ private:
         else
         {
             int width, height;
-            glfwGetFramebufferSize(m_window.GetGLFWwindow(), &width, &height);
+            glfwGetFramebufferSize( m_window.window, &width, &height);
 
             VkExtent2D actualExtent{
                 static_cast<uint32_t>(width),

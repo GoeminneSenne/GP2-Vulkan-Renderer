@@ -7,33 +7,26 @@
 
 namespace dae
 {
-	class Window
+	struct Window final
 	{
-	public:
 		explicit Window(int width, int height, std::string title);
 		~Window();
-
-		void PollEvents() const;
-		
-		bool ShouldClose() const;
-		//Immediately resets m_wasResized back to false, since window resizing is similar to an event that needs to be processed once
-		bool WasResized();
-		GLFWwindow* GetGLFWwindow() const;
-
 		Window(const Window& other) = delete;
 		Window(Window&& other) = delete;
 		Window& operator=(const Window& other) = delete;
 		Window& operator=(Window&& other) = delete;
 
-	private:
 		void InitWindow();
+		void PollEvents() const;
+		bool ShouldClose() const;
+
+		int width;
+		int height;
+		std::string title;
+		bool wasResized;
+		GLFWwindow* window;
+
+	private:
 		static void FramebufferResizeCallback(GLFWwindow* glfwWindow, int width, int height);
-
-		int m_width;
-		int m_height;
-		std::string m_title;
-		bool m_wasResized;
-
-		GLFWwindow* m_pWindow;
 	};
 }
