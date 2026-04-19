@@ -4,7 +4,7 @@ set(SOURCES
  "src/Window.cpp" 
  "src/InstanceBuilder.cpp" 
  "src/Instance.cpp"
- "src/PhysicalDevice.cpp" 
+  
  "src/PhysicalDeviceSelector.cpp")
 
 #Create executable

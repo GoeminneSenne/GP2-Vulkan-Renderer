@@ -30,6 +30,9 @@ void dae::PhysicalDeviceSelector::PickPhysicalDevice(const Instance& instance, P
 		if (IsDeviceSuitable(instance, device))
 		{
 			physicalDevice.physicalDevice = device;
+			physicalDevice.queueFamilyIndices = vkUtils::FindQueueFamilies(instance, device);
+			physicalDevice.swapChainSupport = vkUtils::QuerySwapChainSupport(instance, device);
+			vkGetPhysicalDeviceFeatures(device, &physicalDevice.features);
 			break;
 		}
 	}

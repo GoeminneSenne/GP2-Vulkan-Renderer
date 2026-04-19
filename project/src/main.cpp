@@ -72,14 +72,6 @@ constexpr static bool enableValidationLayers = true;
 #endif
 
 
-
-struct SwapChainSupportDetails
-{
-    VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
-};
-
 struct UniformBufferObject
 {
     alignas(16) glm::mat4 model;
@@ -127,7 +119,6 @@ private:
 
     PhysicalDevice m_physicalDevice{};
 
-    //VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
     VkDevice device{nullptr};
 
     VkQueue graphicsQueue{nullptr};
@@ -280,7 +271,7 @@ private:
 
     void createLogicalDevice()
     {
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+        QueueFamilyIndices indices = m_physicalDevice.queueFamilyIndices;
 
         std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies = {
@@ -322,7 +313,7 @@ private:
             createInfo.enabledLayerCount = 0;
         }
 
-        if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
+        if (vkCreateDevice(m_physicalDevice.physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
             throw std::runtime_error("failed to create logical device!");
 
         vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
@@ -335,34 +326,11 @@ private:
         physicalDeviceSelector
             .AddDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME)
             .PickPhysicalDevice(m_instance, m_physicalDevice);
-
-        /*
-        uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(m_instance.instance, &deviceCount, nullptr);
-
-        if (deviceCount == 0)
-            throw std::runtime_error("failed to find GPUs with Vulkan support!");
-
-        std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(m_instance.instance, &deviceCount, devices.data());
-    
-        for (const auto& device : devices)
-        {
-	        if (isDeviceSuitable(device))
-	        {
-                physicalDevice = device;
-                break;
-	        }
-        }
-
-        if (physicalDevice == VK_NULL_HANDLE)
-            throw std::runtime_error("failed to find a suitable GPU");
-		*/
     }
 
     void createSwapChain()
     {
-        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
+        SwapChainSupportDetails swapChainSupport = m_physicalDevice.swapChainSupport;
 
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -384,7 +352,7 @@ private:
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+        QueueFamilyIndices indices = m_physicalDevice.queueFamilyIndices;
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
         if (indices.graphicsFamily != indices.presentFamily)
@@ -699,12 +667,11 @@ private:
 
     void createCommandPool()
     {
-        QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
 
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+        poolInfo.queueFamilyIndex = m_physicalDevice.queueFamilyIndices.graphicsFamily.value();
 
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
             throw std::runtime_error("failed to create command pool!");
@@ -713,7 +680,7 @@ private:
     void createVmaAllocator()
     {
         VmaAllocatorCreateInfo createInfo{};
-        createInfo.physicalDevice = physicalDevice;
+        createInfo.physicalDevice = m_physicalDevice.physicalDevice;
         createInfo.device = device;
         createInfo.instance = m_instance.instance;
         createInfo.flags = 0;
@@ -898,7 +865,7 @@ private:
 	    for (VkFormat format : candidates)
 	    {
             VkFormatProperties properties;
-            vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &properties);
+            vkGetPhysicalDeviceFormatProperties(m_physicalDevice.physicalDevice, format, &properties);
 
             if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
             {
@@ -973,7 +940,7 @@ private:
     void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
         // Check if image format supports linear blitting
         VkFormatProperties formatProperties;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, imageFormat, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties(m_physicalDevice.physicalDevice, imageFormat, &formatProperties);
 
         if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
             throw std::runtime_error("texture image format does not support linear blitting!");
@@ -1097,7 +1064,7 @@ private:
         samplerInfo.anisotropyEnable = VK_TRUE;
 
         VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+        vkGetPhysicalDeviceProperties(m_physicalDevice.physicalDevice, &properties);
 
         samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
 
@@ -1347,7 +1314,7 @@ private:
 
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
         VkPhysicalDeviceMemoryProperties memProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice.physicalDevice, &memProperties);
 
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
             if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -1585,150 +1552,6 @@ private:
         }
     }
 
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const
-	{
-        SwapChainSupportDetails details;
-
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_instance.surface, &details.capabilities);
-
-        uint32_t formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_instance.surface, &formatCount, nullptr);
-
-        if (formatCount != 0)
-        {
-            details.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_instance.surface, &formatCount, details.formats.data());
-        }
-
-        uint32_t presentModeCount;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_instance.surface, &presentModeCount, nullptr);
-
-        if (presentModeCount != 0)
-        {
-            details.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_instance.surface, &presentModeCount, details.presentModes.data());
-        }
-
-        return details;
-	}
-
-    bool isDeviceSuitable(VkPhysicalDevice device) const
-    {
-        QueueFamilyIndices indices = findQueueFamilies(device);
-
-        bool extensionsSupported = checkDeviceExtensionsSupport(device);
-
-        bool swapChainAdequate = false;
-        if (extensionsSupported)
-        {
-            SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-            swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-        }
-
-        VkPhysicalDeviceFeatures supportedFeatures;
-        vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-
-        return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
-    }
-
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const
-    {
-        QueueFamilyIndices indices;
-
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
- 
-        int i = 0;
-        for (const auto& queueFamily : queueFamilies)
-        {
-	        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-	        {
-                indices.graphicsFamily = i;
-	        }
-
-            VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_instance.surface, &presentSupport);
-
-            if (presentSupport)
-            {
-                indices.presentFamily = i;
-            }
-
-            if (indices.isComplete())
-            {
-                break;
-            }
-
-            ++i;
-        }
-
-        return indices;
-    }
-
-    bool checkValidationLayerSupport() const
-    {
-        uint32_t layerCount;
-        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-        std::vector<VkLayerProperties> availableLayers(layerCount);
-        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-        for (const char* layerName : validationLayers)
-        {
-            bool layerFound = false;
-
-            for (const auto& layerProperties : availableLayers)
-            {
-	            if (std::strcmp(layerName, layerProperties.layerName) == 0)
-	            {
-                    layerFound = true;
-                    break;
-	            }
-            }
-
-            if (!layerFound)
-                return false;
-        }
-
-        return true;
-    }
-
-    bool checkDeviceExtensionsSupport(VkPhysicalDevice device) const
-    {
-        uint32_t extensionCount;
-        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-        for (const auto& extension : availableExtensions)
-        {
-            requiredExtensions.erase(extension.extensionName);
-        }
-
-        return requiredExtensions.empty();
-    }
-
-    std::vector<const char*> getRequiredExtensions() const
-    {
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-        if (enableValidationLayers)
-        {
-            extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        }
-
-        return extensions;
-    }
-
     static std::vector<char> readFile(const std::string& filename)
     {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -1746,19 +1569,6 @@ private:
 
         return buffer;
     }
-
-    /*
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData)
-    {
-        std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-        return VK_FALSE;
-    }
-    */
 };
 
 int main() {
