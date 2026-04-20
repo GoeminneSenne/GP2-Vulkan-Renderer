@@ -13,6 +13,7 @@ namespace dae
 	{
 	public:
 		PhysicalDeviceSelector& AddDeviceExtension(const char* extensionName);
+		PhysicalDeviceSelector& AddDeviceExtensions(const std::vector<const char*>& extensionNames);
 
 		void PickPhysicalDevice(const Instance& instance, PhysicalDevice& physicalDevice) const;
 

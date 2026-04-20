@@ -14,6 +14,13 @@ dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtension(con
 	return *this;
 }
 
+dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtensions(
+	const std::vector<const char*>& extensionNames)
+{
+	deviceExtensions.insert(deviceExtensions.end(), extensionNames.begin(), extensionNames.end());
+	return *this;
+}
+
 void dae::PhysicalDeviceSelector::PickPhysicalDevice(const Instance& instance, PhysicalDevice& physicalDevice) const
 {
 	uint32_t deviceCount = 0;
@@ -32,6 +39,7 @@ void dae::PhysicalDeviceSelector::PickPhysicalDevice(const Instance& instance, P
 			physicalDevice.physicalDevice = device;
 			physicalDevice.queueFamilyIndices = vkUtils::FindQueueFamilies(instance, device);
 			physicalDevice.swapChainSupport = vkUtils::QuerySwapChainSupport(instance, device);
+			vkGetPhysicalDeviceProperties(device, &physicalDevice.properties);
 			vkGetPhysicalDeviceFeatures(device, &physicalDevice.features);
 			break;
 		}

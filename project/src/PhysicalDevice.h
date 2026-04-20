@@ -11,6 +11,7 @@ namespace dae
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		QueueFamilyIndices queueFamilyIndices;
 		SwapChainSupportDetails swapChainSupport;
+		VkPhysicalDeviceProperties properties;
 		VkPhysicalDeviceFeatures features;
 	};
 }

@@ -95,9 +95,21 @@ dae::InstanceBuilder& dae::InstanceBuilder::AddExtension(const char* extensionNa
 	return *this;
 }
 
+dae::InstanceBuilder& dae::InstanceBuilder::AddExtensions(const std::vector<const char*>& extensionNames)
+{
+	extensions.insert(extensions.end(), extensionNames.begin(), extensionNames.end());
+	return *this;
+}
+
 dae::InstanceBuilder& dae::InstanceBuilder::AddValidationLayer(const char* layerName)
 {
 	validationLayers.push_back(layerName);
+	return *this;
+}
+
+dae::InstanceBuilder& dae::InstanceBuilder::AddValidationLayers(const std::vector<const char*>& layerNames)
+{
+	validationLayers.insert(validationLayers.end(), layerNames.begin(), layerNames.end());
 	return *this;
 }
 

@@ -23,7 +23,9 @@ namespace dae
 		InstanceBuilder& SetEngineVersion(uint32_t version);
 		InstanceBuilder& SetApiVersion(uint32_t version);
 		InstanceBuilder& AddExtension(const char* extensionName);
+		InstanceBuilder& AddExtensions(const std::vector<const char*>& extensionNames);
 		InstanceBuilder& AddValidationLayer(const char* layerName);
+		InstanceBuilder& AddValidationLayers(const std::vector<const char*>& layerNames);
 		InstanceBuilder& UseValidation(bool use);
 
 	private:
