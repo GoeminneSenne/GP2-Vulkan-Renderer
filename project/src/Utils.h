@@ -43,9 +43,9 @@ namespace dae
 			return indices;
 		}
 
-		inline SwapChainSupportDetails QuerySwapChainSupport(const Instance& instance, VkPhysicalDevice device)
+		inline SwapchainSupportDetails QuerySwapChainSupport(const Instance& instance, VkPhysicalDevice device)
 		{
-			SwapChainSupportDetails details;
+			SwapchainSupportDetails details;
 
 			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, instance.surface, &details.capabilities);
 

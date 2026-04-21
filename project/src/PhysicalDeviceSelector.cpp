@@ -38,7 +38,7 @@ void dae::PhysicalDeviceSelector::PickPhysicalDevice(const Instance& instance, P
 		{
 			physicalDevice.physicalDevice = device;
 			physicalDevice.queueFamilyIndices = vkUtils::FindQueueFamilies(instance, device);
-			physicalDevice.swapChainSupport = vkUtils::QuerySwapChainSupport(instance, device);
+			physicalDevice.swapchainSupport = vkUtils::QuerySwapChainSupport(instance, device);
 			vkGetPhysicalDeviceProperties(device, &physicalDevice.properties);
 			vkGetPhysicalDeviceFeatures(device, &physicalDevice.features);
 			break;
@@ -58,7 +58,7 @@ bool dae::PhysicalDeviceSelector::IsDeviceSuitable(const Instance& instance, VkP
 	bool swapChainAdequate = false;
 	if (extensionsSupported)
 	{
-		SwapChainSupportDetails swapchainSupport = vkUtils::QuerySwapChainSupport(instance, device);
+		SwapchainSupportDetails swapchainSupport = vkUtils::QuerySwapChainSupport(instance, device);
 		swapChainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
 	}
 

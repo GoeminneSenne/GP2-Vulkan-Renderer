@@ -52,6 +52,7 @@
 #include "QueueFamilyIndices.h"
 #include "LogicalDevice.h"
 #include "LogicalDeviceBuilder.h"
+#include "Swapchain.h"
 
 using namespace dae;
 
@@ -284,7 +285,7 @@ private:
 
     void createSwapChain()
     {
-        SwapChainSupportDetails swapChainSupport = m_physicalDevice.swapChainSupport;
+        SwapchainSupportDetails swapChainSupport = m_physicalDevice.swapchainSupport;
 
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
         VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -1451,6 +1452,7 @@ private:
         return shaderModule;
     }
 
+    
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
     {
 	    for (const auto& availableFormat : availableFormats)
@@ -1502,6 +1504,7 @@ private:
             return actualExtent;
         }
     }
+	
 
     static std::vector<char> readFile(const std::string& filename)
     {
