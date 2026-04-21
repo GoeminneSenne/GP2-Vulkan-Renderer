@@ -171,7 +171,7 @@ private:
 	{
         CreateInstance();
         PickPhysicalDevice();
-        createLogicalDevice();
+        CreateLogicalDevice();
         createSwapChain();
         createImageViews();
         createRenderPass();
@@ -271,11 +271,10 @@ private:
             .PickPhysicalDevice(m_instance, m_physicalDevice);
     }
 
-    void createLogicalDevice()
+    void CreateLogicalDevice()
     {
         LogicalDeviceBuilder logicalDeviceBuilder = {};
         logicalDeviceBuilder
-            .SetQueueFamilies(m_physicalDevice.queueFamilyIndices)
             .EnablebleAnisotropy(true)
             .AddDeviceExtensions(deviceExtensions)
             .UseValidation(true)

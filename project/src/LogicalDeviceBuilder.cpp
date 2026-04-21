@@ -7,6 +7,8 @@
 
 void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, LogicalDevice& logicalDevice)
 {
+	QueueFamilyIndices familyIndices = physicalDevice.queueFamilyIndices;
+
 	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 	std::set<uint32_t> uniqueQueueFamilies =
 	{
@@ -53,12 +55,6 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 
 	vkGetDeviceQueue(logicalDevice.device, logicalDevice.graphicsFamily, 0, &logicalDevice.graphicsQueue);
 	vkGetDeviceQueue(logicalDevice.device, logicalDevice.presentFamily, 0, &logicalDevice.presentQueue);
-}
-
-dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::SetQueueFamilies(QueueFamilyIndices indices)
-{
-	familyIndices = indices;
-	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::EnablebleAnisotropy(bool enable)
