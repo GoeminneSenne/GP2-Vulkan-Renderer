@@ -23,7 +23,7 @@ namespace dae
 		uint32_t mipLevels = 0;
 
 	private:
-		void CreateImageView(const LogicalDevice& logicalDevice);
+		//void CreateImageView(const LogicalDevice& logicalDevice);
 		//void GenerateMipmaps();
 	};
 }
