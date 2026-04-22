@@ -78,5 +78,6 @@ void dae::Swapchain::Cleanup(const LogicalDevice& logicalDevice)
 	for (auto image : images)
 		vkDestroyImageView(logicalDevice.device, image.view, nullptr);
 
+	//TODO if check VK_NULL_HANDLE
 	vkDestroySwapchainKHR(logicalDevice.device, swapchain, nullptr);
 }
