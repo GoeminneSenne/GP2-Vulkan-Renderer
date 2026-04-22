@@ -1,7 +1,6 @@
 #include  "PhysicalDeviceSelector.h"
 
 #include <set>
-#include <stdexcept>
 #include <vector>
 
 #include "Instance.h"

@@ -1,5 +1,6 @@
 #include "InstanceBuilder.h"
 
+#include "Common.h"
 #include "GLFW/glfw3.h"
 #include "VulkanDebug.h"
 
@@ -41,9 +42,10 @@ void dae::InstanceBuilder::Build(Instance& instance)
 		createInfo.pNext = nullptr;
 	}
 
-	if (vkCreateInstance(&createInfo, nullptr, &instance.instance) != VK_SUCCESS)
-		throw std::runtime_error("failed to create instance!");
-
+	LOG_VULKAN_ERROR(
+		vkCreateInstance(&createInfo, nullptr, &instance.instance),
+		"failed to create instance!"
+	);
 
 	//DEBUG MESSENGER
 	/////////////////////
@@ -55,8 +57,10 @@ void dae::InstanceBuilder::Build(Instance& instance)
 	VkDebugUtilsMessengerCreateInfoEXT debugcreateInfo;
 	PopulateDebugMessengerCreateInfo(debugcreateInfo);
 
-	if (instance.debugTable.vkCreateDebugUtilsMessengerEXT(instance.instance, &debugcreateInfo, nullptr, &instance.debugMessenger) != VK_SUCCESS)
-		throw std::runtime_error("failed to create debug messenger");
+	LOG_VULKAN_ERROR(
+		instance.debugTable.vkCreateDebugUtilsMessengerEXT(instance.instance, &debugcreateInfo, nullptr, &instance.debugMessenger),
+		"failed to create debug messenger"
+	);
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetApplicationName(std::string name)

@@ -1,5 +1,6 @@
 #include "Swapchain.h"
 
+#include "Common.h"
 #include "Instance.h"
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
@@ -54,8 +55,10 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-	if (vkCreateSwapchainKHR(logicalDevice.device, &createInfo, nullptr, &swapchain) != VK_SUCCESS)
-		throw std::runtime_error("failed to create swapchain!");
+	LOG_VULKAN_ERROR(
+		vkCreateSwapchainKHR(logicalDevice.device, &createInfo, nullptr, &swapchain),
+		"failed to create swapchain!"
+	);
 
 	vkGetSwapchainImagesKHR(logicalDevice.device, swapchain, &imageCount, nullptr);
 	std::vector<VkImage> rawImages(imageCount);

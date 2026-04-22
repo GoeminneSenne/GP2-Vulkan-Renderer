@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 
+#include "Common.h"
 #include "Image.h"
 #include "LogicalDevice.h"
 
@@ -23,8 +24,10 @@ namespace dae
 			viewInfo.subresourceRange.baseArrayLayer = 0;
 			viewInfo.subresourceRange.layerCount = 1;
 
-			if (vkCreateImageView(logicalDevice.device, &viewInfo, nullptr, &image.view) != VK_SUCCESS)
-				throw std::runtime_error("Failed to create image view!");
+			LOG_VULKAN_ERROR(
+				vkCreateImageView(logicalDevice.device, &viewInfo, nullptr, &image.view),
+				"failed to create image view!"
+			);
 		}
 	}
 }

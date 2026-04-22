@@ -1,8 +1,6 @@
 #include "Image.h"
 #include "ImageHelpers.h"
 
-#include <stdexcept>
-
 #include "LogicalDevice.h"
 
 dae::Image dae::Image::WrapSwapchainImage(const LogicalDevice& logicalDevice, VkImage swapchainImage, VkFormat format,

@@ -2,6 +2,7 @@
 
 namespace dae
 {
+	//TODO: misschien mag dit ook in common.h
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,

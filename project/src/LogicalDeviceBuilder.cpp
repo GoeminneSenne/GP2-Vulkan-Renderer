@@ -1,8 +1,8 @@
 #include "LogicalDeviceBuilder.h"
 
 #include <set>
-#include <stdexcept>
 
+#include "Common.h"
 #include "PhysicalDevice.h"
 
 void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, LogicalDevice& logicalDevice)
@@ -47,8 +47,10 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 		createInfo.enabledLayerCount = 0;
 	}
 
-	if (vkCreateDevice(physicalDevice.physicalDevice, &createInfo, nullptr, &logicalDevice.device))
-		throw std::runtime_error("failed to create logical device!");
+	LOG_VULKAN_ERROR(
+		vkCreateDevice(physicalDevice.physicalDevice, &createInfo, nullptr, &logicalDevice.device),
+		"failed to create logical device!"
+	);
 
 	logicalDevice.graphicsFamily = familyIndices.graphicsFamily.value();
 	logicalDevice.presentFamily = familyIndices.presentFamily.value();

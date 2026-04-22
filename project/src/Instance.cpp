@@ -1,7 +1,5 @@
 #include "Instance.h"
-
-#include <stdexcept>
-
+#include "Common.h"
 #include "Window.h"
 
 dae::Instance::~Instance()
@@ -17,6 +15,8 @@ dae::Instance::~Instance()
 
 void dae::Instance::CreateSurface(const Window& window)
 {
-	if (glfwCreateWindowSurface(instance, window.window, nullptr, &surface) != VK_SUCCESS)
-		throw std::runtime_error("failed to create window surface!");
+	LOG_VULKAN_ERROR(
+		glfwCreateWindowSurface(instance, window.window, nullptr, &surface),
+		"failed to create window surface!"
+	);
 }
