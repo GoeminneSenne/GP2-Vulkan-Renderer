@@ -54,6 +54,8 @@
 #include "LogicalDeviceBuilder.h"
 #include "Swapchain.h"
 #include "Image.h"
+#include "ShaderLoader.h"
+#include "Shader.h"
 
 using namespace dae;
 
@@ -235,7 +237,6 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             vkDestroySemaphore(m_logicalDevice.device, imageAvailableSemaphores[i], nullptr);
-            //vkDestroySemaphore(m_logicalDevice.device, renderFinishedSemaphores[i], nullptr); //TODO use imagecount from swapchain
             vkDestroyFence(m_logicalDevice.device, inFlightFences[i], nullptr);
 
         }
@@ -321,7 +322,6 @@ private:
 
         //Semaphore reconstruction
         //TODO: should be in seperate function or handled elsewhere??
-
         renderFinishedSemaphores.resize(m_swapchain.images.size());
 
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -424,23 +424,28 @@ private:
 
     void createGraphicsPipeline()
     {
-        auto vertShaderCode = readFile("resources/shaders/base_shader.vert.spv");
-        auto fragShaderCode = readFile("resources/shaders/base_shader.frag.spv");
+        Shader vertexShader, fragmentShader;
+        
+    	ShaderLoader shaderLoader = {};
+        shaderLoader
+            .SetFilename("resources/shaders/base_shader.vert.spv")
+            .Load(m_logicalDevice, vertexShader);
 
-        VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-        VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+        shaderLoader
+            .SetFilename("resources/shaders/base_shader.frag.spv")
+            .Load(m_logicalDevice, fragmentShader);
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        vertShaderStageInfo.module = vertShaderModule;
-        vertShaderStageInfo.pName = "main";
+        vertShaderStageInfo.module = vertexShader.module;
+        vertShaderStageInfo.pName = vertexShader.entryPoint.c_str();
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
         fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        fragShaderStageInfo.module = fragShaderModule;
-        fragShaderStageInfo.pName = "main";
+        fragShaderStageInfo.module = fragmentShader.module;
+        fragShaderStageInfo.pName = fragmentShader.entryPoint.c_str();
 
         VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
@@ -546,8 +551,8 @@ private:
         if (vkCreateGraphicsPipelines(m_logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
             throw std::runtime_error("failed to create graphics pipeline!");
 
-        vkDestroyShaderModule(m_logicalDevice.device, fragShaderModule, nullptr);
-        vkDestroyShaderModule(m_logicalDevice.device, vertShaderModule, nullptr);
+        fragmentShader.Destroy(m_logicalDevice);
+        vertexShader.Destroy(m_logicalDevice);
     }
 
     void createFramebuffers()
