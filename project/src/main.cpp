@@ -58,6 +58,8 @@
 #include "SamplerBuilder.h"
 #include "ShaderLoader.h"
 #include "Shader.h"
+#include "CommandBuffer.h"
+#include "CommandPool.h"
 
 using namespace dae;
 
@@ -137,8 +139,8 @@ private:
     VkPipelineLayout pipelineLayout{};
     VkPipeline graphicsPipeline{};
 
-    VkCommandPool commandPool{};
-    std::vector<VkCommandBuffer> commandBuffers;
+    CommandPool m_commandPool{};
+    std::vector<CommandBuffer> m_renderCommandBuffers;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -180,8 +182,8 @@ private:
         createRenderPass();
         createDescriptorSetLayout();
     	createGraphicsPipeline();
-        createCommandPool();
-        createVmaAllocator();
+        m_commandPool.CreateCommandPool(m_physicalDevice, &m_logicalDevice);
+    	createVmaAllocator();
         createDepthResources();
         createFramebuffers();
         createTextureImage();
@@ -193,8 +195,8 @@ private:
         createUniformBuffers();
         createDescriptorPool();
         createDescriptorSets();
-        createCommandBuffers();
-        createSyncObjects();
+        m_renderCommandBuffers = m_commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
+    	createSyncObjects();
     }
 
     void mainLoop() 
@@ -249,7 +251,7 @@ private:
             vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
         }
 
-        vkDestroyCommandPool(m_logicalDevice.device, commandPool, nullptr);
+        m_commandPool.Destroy();
 
         m_logicalDevice.Destroy();
 
@@ -581,18 +583,6 @@ private:
         }
     }
 
-    void createCommandPool()
-    {
-
-        VkCommandPoolCreateInfo poolInfo{};
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = m_physicalDevice.queueFamilyIndices.graphicsFamily.value();
-
-        if (vkCreateCommandPool(m_logicalDevice.device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
-            throw std::runtime_error("failed to create command pool!");
-    }
-
     void createVmaAllocator()
     {
         VmaAllocatorCreateInfo createInfo{};
@@ -601,8 +591,10 @@ private:
         createInfo.instance = m_instance.instance;
         createInfo.flags = 0;
         
-        if (vmaCreateAllocator(&createInfo, &allocator) != VK_SUCCESS)
-            throw std::runtime_error("failed to create vma allocator!");
+        LOG_VULKAN_ERROR(
+            vmaCreateAllocator(&createInfo, &allocator),
+			"failed to create VMA allocator!"
+        );
     }
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage allocUsage, VmaAllocationCreateFlags allocFlags,
@@ -625,13 +617,14 @@ private:
 
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
     {
-		VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+
 
         VkBufferCopy copyRegion{};
         copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+        vkCmdCopyBuffer(commandBuffer.commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-        endSingleTimeCommands(commandBuffer);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
@@ -672,7 +665,8 @@ private:
     void transitionImageLayout(VkImage image, VkFormat format, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
         VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
     {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -688,6 +682,7 @@ private:
         barrier.srcAccessMask = srcAccessMask;
         barrier.dstAccessMask = dstAccessMask;
 
+        //TODO aanpassen dat aspectMask een onderdeel van Image is
         if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -703,7 +698,7 @@ private:
         }
 
         vkCmdPipelineBarrier(
-            commandBuffer,
+            commandBuffer.commandBuffer,
             sourceStage, destinationStage,
             0,
             0, nullptr,
@@ -711,12 +706,12 @@ private:
             1, &barrier
         );
 
-        endSingleTimeCommands(commandBuffer);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
     {
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
 
         VkBufferImageCopy region{};
         region.bufferOffset = 0;
@@ -731,10 +726,10 @@ private:
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = { width, height, 1 };
 
-        vkCmdCopyBufferToImage(commandBuffer, buffer, image,
+        vkCmdCopyBufferToImage(commandBuffer.commandBuffer, buffer, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-        endSingleTimeCommands(commandBuffer);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling,
@@ -844,8 +839,6 @@ private:
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-        //transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
-        //    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
         vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
@@ -862,7 +855,7 @@ private:
             throw std::runtime_error("texture image format does not support linear blitting!");
         }
 
-        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
 
         VkImageMemoryBarrier barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -884,7 +877,7 @@ private:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-            vkCmdPipelineBarrier(commandBuffer,
+            vkCmdPipelineBarrier(commandBuffer.commandBuffer,
                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                 0, nullptr,
                 0, nullptr,
@@ -904,7 +897,7 @@ private:
             blit.dstSubresource.baseArrayLayer = 0;
             blit.dstSubresource.layerCount = 1;
 
-            vkCmdBlitImage(commandBuffer,
+            vkCmdBlitImage(commandBuffer.commandBuffer,
                 image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 1, &blit,
@@ -915,7 +908,7 @@ private:
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-            vkCmdPipelineBarrier(commandBuffer,
+            vkCmdPipelineBarrier(commandBuffer.commandBuffer,
                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
                 0, nullptr,
                 0, nullptr,
@@ -931,13 +924,13 @@ private:
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        vkCmdPipelineBarrier(commandBuffer,
+        vkCmdPipelineBarrier(commandBuffer.commandBuffer,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
             0, nullptr,
             0, nullptr,
             1, &barrier);
 
-        endSingleTimeCommands(commandBuffer);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
@@ -1176,41 +1169,6 @@ private:
         memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
     }
 
-    VkCommandBuffer beginSingleTimeCommands()
-    {
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        VkCommandBuffer commandBuffer;
-        vkAllocateCommandBuffers(m_logicalDevice.device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-        return commandBuffer;
-    }
-
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer)
-    {
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(m_logicalDevice.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(m_logicalDevice.graphicsQueue);
-
-        vkFreeCommandBuffers(m_logicalDevice.device, commandPool, 1, &commandBuffer);
-    }
-
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
         VkPhysicalDeviceMemoryProperties memProperties;
         vkGetPhysicalDeviceMemoryProperties(m_physicalDevice.physicalDevice, &memProperties);
@@ -1224,29 +1182,11 @@ private:
         throw std::runtime_error("failed to find suitable memory type!");
     }
 
-    void createCommandBuffers()
+
+    //Record Render Command Buffer
+    void recordCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
     {
-        commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = commandPool;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-
-        if (vkAllocateCommandBuffers(m_logicalDevice.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
-            throw std::runtime_error("failed to allocate command buffers!");
-    }
-
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
-    {
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0;
-        beginInfo.pInheritanceInfo = nullptr;
-
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-            throw std::runtime_error("failed to begin recording command buffer!");
+        commandBuffer.Begin();
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1262,9 +1202,9 @@ private:
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
 
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(commandBuffer.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        vkCmdBindPipeline(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
         VkViewport viewport{};
         viewport.x = 0.f;
@@ -1273,27 +1213,26 @@ private:
         viewport.height = static_cast<float>(m_swapchain.extent.height);
         viewport.minDepth = 0.f;
         viewport.maxDepth = 1.f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        vkCmdSetViewport(commandBuffer.commandBuffer, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = { 0,0 };
         scissor.extent = m_swapchain.extent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
 
         VkBuffer vertexBuffers[] = {vertexBuffer};
         VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+        vkCmdBindVertexBuffers(commandBuffer.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer.commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
         
-    	vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0); 
+    	vkCmdDrawIndexed(commandBuffer.commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
-        vkCmdEndRenderPass(commandBuffer);
+        vkCmdEndRenderPass(commandBuffer.commandBuffer);
 
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-            throw std::runtime_error("failed ot record command buffer!");
+        commandBuffer.End();
     }
 
     void createSyncObjects()
@@ -1346,8 +1285,8 @@ private:
 
         vkResetFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame]);
 
-        vkResetCommandBuffer(commandBuffers[currentFrame], 0);
-        recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+        vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
+        recordCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
 
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1359,7 +1298,7 @@ private:
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
+        submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].commandBuffer;
 
         //TODO: make sure you create semaphores based on the nr of swap chain images / destroy them as well
         VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[imageIndex]};
