@@ -177,8 +177,6 @@ private:
         PickPhysicalDevice();
         CreateLogicalDevice();
         m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
-    	//createSwapChain();
-        //createImageViews();
         createRenderPass();
         createDescriptorSetLayout();
     	createGraphicsPipeline();
@@ -287,66 +285,6 @@ private:
             .Build(m_physicalDevice, m_logicalDevice);
     }
 
-    /*
-    void createSwapChain()
-    {
-        SwapchainSupportDetails swapChainSupport = m_physicalDevice.swapchainSupport;
-
-        VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-        VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
-        VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
-
-        uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-        if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
-        {
-            imageCount = swapChainSupport.capabilities.maxImageCount;
-        }
-
-        VkSwapchainCreateInfoKHR createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = m_instance.surface;
-        createInfo.minImageCount = imageCount;
-        createInfo.imageFormat = surfaceFormat.format;
-        createInfo.imageColorSpace = surfaceFormat.colorSpace;
-        createInfo.imageExtent = extent;
-        createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-        QueueFamilyIndices indices = m_physicalDevice.queueFamilyIndices;
-        uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
-
-        if (indices.graphicsFamily != indices.presentFamily)
-        {
-            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-            createInfo.queueFamilyIndexCount = 2;
-            createInfo.pQueueFamilyIndices = queueFamilyIndices;
-        }   
-        else
-        {
-            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-            createInfo.queueFamilyIndexCount = 0; //Optional
-            createInfo.pQueueFamilyIndices = nullptr; //Optional
-        }
-
-        createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
-        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = presentMode;
-        createInfo.clipped = VK_TRUE;
-
-        createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-        if (vkCreateSwapchainKHR(m_logicalDevice.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
-            throw std::runtime_error("failed to create swap chain!");
-
-        vkGetSwapchainImagesKHR(m_logicalDevice.device, swapChain, &imageCount, nullptr);
-        swapChainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(m_logicalDevice.device, swapChain, &imageCount, swapChainImages.data());
-
-        swapChainImageFormat = surfaceFormat.format;
-        swapChainExtent = extent;
-    }
-	*/
-
     void cleanupSwapChain()
     {
         vkDestroyImageView(m_logicalDevice.device, depthImageView, nullptr);
@@ -356,13 +294,6 @@ private:
             vkDestroyFramebuffer(m_logicalDevice.device, framebuffer, nullptr);
 
         m_swapchain.Cleanup(m_logicalDevice);
-
-        /*
-        for (auto imageView : swapChainImageViews)
-            vkDestroyImageView(m_logicalDevice.device, imageView, nullptr);
-
-        vkDestroySwapchainKHR(m_logicalDevice.device, swapChain, nullptr);
-		*/
     }
 
     void recreateSwapChain()
@@ -379,23 +310,9 @@ private:
         cleanupSwapChain();
 
         m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
-        //createSwapChain();
-    	//createImageViews();
         createDepthResources();
         createFramebuffers();
     }
-
-    /*
-    void createImageViews()
-    {
-        swapChainImageViews.resize(swapChainImages.size());
-
-        for (uint32_t i = 0; i < swapChainImages.size(); ++i)
-        {
-	        swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-        }
-    }
-	*/
 
     void createRenderPass()
     {
@@ -1465,61 +1382,6 @@ private:
 
         return shaderModule;
     }
-
-    /*
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
-    {
-	    for (const auto& availableFormat : availableFormats)
-	    {
-		    if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB 
-                && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-		    {
-                return availableFormat;
-		    }
-	    }
-
-        return availableFormats[0];
-    }
-
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const
-    {
-        for (const auto& availablePresentMode : availablePresentModes)
-        {
-	        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-	        {
-                return availablePresentMode;
-	        }
-        }
-
-        return VK_PRESENT_MODE_FIFO_KHR;
-    }
-
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
-    {
-	    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-	    {
-            return capabilities.currentExtent;
-	    }
-        else
-        {
-            int width, height;
-            glfwGetFramebufferSize( m_window.window, &width, &height);
-
-            VkExtent2D actualExtent{
-                static_cast<uint32_t>(width),
-                static_cast<uint32_t>(height)
-            };
-
-            actualExtent.width = std::clamp(actualExtent.width, 
-                capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-            actualExtent.height = std::clamp(actualExtent.height,
-                capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-            return actualExtent;
-        }
-    }
-	*/
-	
 
     static std::vector<char> readFile(const std::string& filename)
     {
