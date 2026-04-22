@@ -5,6 +5,7 @@
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
 #include "SwapchainSupportDetails.h"
+#include "ImageHelpers.h"
 
 void dae::Swapchain::Create(const Window& window, const Instance& instance, 
 	const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice)
@@ -68,7 +69,7 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	images.resize(imageCount);
 	for (size_t idx{}; idx < imageCount; ++idx)
 	{
-		images[idx] = Image::WrapSwapchainImage(logicalDevice, rawImages[idx], surfaceFormat.format, extent);
+		images[idx] = ImageHelpers::WrapSwapchainImage(logicalDevice, rawImages[idx], surfaceFormat.format, extent);
 	}
 
 	this->imageFormat = surfaceFormat.format;

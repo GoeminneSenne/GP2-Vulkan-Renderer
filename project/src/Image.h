@@ -10,9 +10,6 @@ namespace dae
 
 	struct Image
 	{
-		static Image WrapSwapchainImage(const LogicalDevice& logicalDevice,
-			VkImage swapchainImage, VkFormat format, VkExtent2D extent);
-
 		void Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
 
 		VkImage image = VK_NULL_HANDLE;
@@ -23,9 +20,5 @@ namespace dae
 		VkExtent2D extent = {};
 		VkImageAspectFlags aspectMask = 0;
 		uint32_t mipLevels = 0;
-
-	private:
-		//void CreateImageView(const LogicalDevice& logicalDevice);
-		//void GenerateMipmaps();
 	};
 }

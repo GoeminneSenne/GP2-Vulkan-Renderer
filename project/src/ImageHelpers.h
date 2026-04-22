@@ -2,10 +2,11 @@
 
 #include <stdexcept>
 
+#include <vulkan/vulkan_core.h>
+
 #include "Common.h"
 #include "Image.h"
 #include "LogicalDevice.h"
-
 
 namespace dae
 {
@@ -28,6 +29,21 @@ namespace dae
 				vkCreateImageView(logicalDevice.device, &viewInfo, nullptr, &image.view),
 				"failed to create image view!"
 			);
+		}
+
+		inline Image WrapSwapchainImage(const LogicalDevice& logicalDevice, 
+			VkImage swapchainImage, VkFormat format, VkExtent2D extent)
+		{
+			Image image;
+			image.image = swapchainImage;
+			image.format = format;
+			image.extent = extent;
+			image.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			image.mipLevels = 1;
+
+			CreateImageView(logicalDevice, image);
+
+			return image;
 		}
 	}
 }
