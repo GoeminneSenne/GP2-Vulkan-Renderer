@@ -124,11 +124,6 @@ private:
 
     Swapchain m_swapchain{};
 
-    //VkSwapchainKHR swapChain{ nullptr };
-    //std::vector<VkImage> swapChainImages;
-    //VkFormat swapChainImageFormat{};
-    //VkExtent2D swapChainExtent{};
-    //std::vector<VkImageView> swapChainImageViews;
     std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VkRenderPass renderPass{};
@@ -240,9 +235,14 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             vkDestroySemaphore(m_logicalDevice.device, imageAvailableSemaphores[i], nullptr);
-            vkDestroySemaphore(m_logicalDevice.device, renderFinishedSemaphores[i], nullptr);
+            //vkDestroySemaphore(m_logicalDevice.device, renderFinishedSemaphores[i], nullptr); //TODO use imagecount from swapchain
             vkDestroyFence(m_logicalDevice.device, inFlightFences[i], nullptr);
 
+        }
+
+        for (const auto& semaphore : renderFinishedSemaphores)
+        {
+            vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
         }
 
         vkDestroyCommandPool(m_logicalDevice.device, commandPool, nullptr);
@@ -312,6 +312,23 @@ private:
         m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
         createDepthResources();
         createFramebuffers();
+
+
+        //Semaphore reconstruction
+        //TODO: should be in seperate function or handled elsewhere??
+
+        renderFinishedSemaphores.resize(m_swapchain.images.size());
+
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        for (auto& semaphore : renderFinishedSemaphores)
+        {
+            if (semaphore != VK_NULL_HANDLE)
+                vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
+
+            vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &semaphore);
+        }
     }
 
     void createRenderPass()
@@ -1283,8 +1300,9 @@ private:
     void createSyncObjects()
     {
         imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+        
+    	renderFinishedSemaphores.resize(m_swapchain.images.size());
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1296,10 +1314,16 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
         {
             if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+                //vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
                 vkCreateFence(m_logicalDevice.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create semaphores!");
 	        
+        }
+
+        for (size_t i = 0; i < m_swapchain.images.size(); ++i)
+        {
+	        if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
+                throw std::runtime_error("failed to create semaphore");
         }
 
     }
@@ -1338,7 +1362,8 @@ private:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+        //TODO: make sure you create semaphores based on the nr of swap chain images / destroy them as well
+        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[imageIndex]};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
