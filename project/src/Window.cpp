@@ -9,7 +9,7 @@ dae::Window::Window(int width, int height, std::string title)
 	InitWindow();
 }
 
-dae::Window::~Window()
+void dae::Window::Destroy()
 {
 	glfwDestroyWindow(window);
 	glfwTerminate();

@@ -6,13 +6,7 @@ namespace dae
 {
 	struct LogicalDevice final
 	{
-		LogicalDevice() = default;
-		~LogicalDevice();
-		LogicalDevice(const LogicalDevice& other) = delete;
-		LogicalDevice(LogicalDevice&& other) = delete;
-		LogicalDevice& operator=(const LogicalDevice& other) = delete;
-		LogicalDevice& operator=(LogicalDevice&& other) = delete;
-
+		void Destroy();
 
 		VkDevice device = VK_NULL_HANDLE;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;

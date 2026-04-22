@@ -247,6 +247,11 @@ private:
 
         vkDestroyCommandPool(m_logicalDevice.device, commandPool, nullptr);
 
+        m_logicalDevice.Destroy();
+
+        m_instance.Destroy();
+        m_window.Destroy();
+
     }
 
     void CreateInstance()
@@ -293,7 +298,7 @@ private:
         for (auto framebuffer : swapChainFramebuffers)
             vkDestroyFramebuffer(m_logicalDevice.device, framebuffer, nullptr);
 
-        m_swapchain.Cleanup(m_logicalDevice, allocator);
+        m_swapchain.Destroy(m_logicalDevice, allocator);
     }
 
     void recreateSwapChain()

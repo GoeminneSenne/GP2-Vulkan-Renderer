@@ -10,13 +10,7 @@ namespace dae
 
 	struct Instance
 	{
-		Instance() = default;
-		~Instance();
-		Instance(const Instance& other) = delete;
-		Instance(Instance&& other) = delete;
-		Instance& operator=(const Instance& other) = delete;
-		Instance& operator=(Instance&& other) = delete;
-
+		void Destroy();
 		void CreateSurface(const Window& window);
 
 		VkInstance instance = VK_NULL_HANDLE;

@@ -16,7 +16,7 @@ namespace dae
 	{
 		void Create(const Window& window, const Instance& instance, 
 			const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice);
-		void Cleanup(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
+		void Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
 
 		VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 		std::vector<Image> images;

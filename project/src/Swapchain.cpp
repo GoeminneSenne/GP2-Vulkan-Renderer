@@ -76,7 +76,7 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	this->extent = extent;
 }
 
-void dae::Swapchain::Cleanup(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
+void dae::Swapchain::Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
 {
 	for (auto& image : images)
 	{

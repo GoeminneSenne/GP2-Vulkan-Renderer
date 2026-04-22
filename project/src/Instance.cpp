@@ -2,7 +2,7 @@
 #include "Common.h"
 #include "Window.h"
 
-dae::Instance::~Instance()
+void dae::Instance::Destroy()
 {
 	if (debugMessenger != VK_NULL_HANDLE)
 	{

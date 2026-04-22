@@ -1,6 +1,6 @@
 #include "LogicalDevice.h"
 
-dae::LogicalDevice::~LogicalDevice()
+void dae::LogicalDevice::Destroy()
 {
 	vkDestroyDevice(device, nullptr);
 }
