@@ -54,6 +54,8 @@
 #include "LogicalDeviceBuilder.h"
 #include "Swapchain.h"
 #include "Image.h"
+#include "Sampler.h"
+#include "SamplerBuilder.h"
 #include "ShaderLoader.h"
 #include "Shader.h"
 
@@ -161,7 +163,8 @@ private:
     VkDeviceMemory textureImageMemory{};
     VmaAllocation textureImageAllocation{};
     VkImageView textureImageView{};
-    VkSampler textureSampler{};
+
+    Sampler m_sampler{};
 
     VkImage depthImage{};
     VkDeviceMemory depthImageMemory{};
@@ -183,7 +186,7 @@ private:
         createFramebuffers();
         createTextureImage();
         createTextureImageView();
-        createTextureSampler();
+        CreateTextureSampler();
         loadModel();
         createVertexBuffer();
         createIndexBuffer();
@@ -209,7 +212,7 @@ private:
 	{
         cleanupSwapChain();
 
-        vkDestroySampler(m_logicalDevice.device, textureSampler, nullptr);
+        m_sampler.Destroy(m_logicalDevice);
         vkDestroyImageView(m_logicalDevice.device, textureImageView, nullptr);
 
         vmaDestroyImage(allocator, textureImage, textureImageAllocation);
@@ -963,33 +966,19 @@ private:
         textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
     }
 
-    void createTextureSampler()
+    void CreateTextureSampler()
     {
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        samplerInfo.magFilter = VK_FILTER_LINEAR;
-        samplerInfo.minFilter = VK_FILTER_LINEAR;
-
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-        samplerInfo.anisotropyEnable = VK_TRUE;
-
-        samplerInfo.maxAnisotropy = m_physicalDevice.properties.limits.maxSamplerAnisotropy;
-
-        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
-        samplerInfo.compareEnable = VK_FALSE;
-        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-
-        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerInfo.mipLodBias = 0.f;
-        samplerInfo.minLod = 0.f;
-        samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
-
-        if (vkCreateSampler(m_logicalDevice.device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
-            throw std::runtime_error("failed to create texture sampler!");
+        SamplerBuilder samplerBuilder = {};
+        samplerBuilder
+            .SetFilter(VK_FILTER_LINEAR)
+            .SetAddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+            .EnableAnisotropy(true)
+            .EnableCompare(false)
+            .SetMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
+            .SetMipLodBias(0.f)
+            .SetMinLod(0.f)
+            .SetMaxLod(VK_LOD_CLAMP_NONE)
+            .Build(m_physicalDevice, m_logicalDevice, m_sampler);
     }
 
     void loadModel()
@@ -1145,7 +1134,7 @@ private:
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = textureImageView;
-            imageInfo.sampler = textureSampler;
+            imageInfo.sampler = m_sampler.sampler;
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
@@ -1402,38 +1391,6 @@ private:
             throw std::runtime_error("failed to present swap chain images!");
 
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-    }
-
-    VkShaderModule createShaderModule(const std::vector<char>& code)
-    {
-        VkShaderModuleCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = code.size();
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-        VkShaderModule shaderModule;
-        if (vkCreateShaderModule(m_logicalDevice.device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
-            throw std::runtime_error("failed to create shader module!");
-
-        return shaderModule;
-    }
-
-    static std::vector<char> readFile(const std::string& filename)
-    {
-        std::ifstream file(filename, std::ios::ate | std::ios::binary);
-
-        if (!file.is_open())
-            throw std::runtime_error("failed to open file");
-    
-        size_t fileSize = (size_t)file.tellg();
-        std::vector<char> buffer(fileSize);
-
-        file.seekg(0);
-        file.read(buffer.data(), fileSize);
-
-        file.close();
-
-        return buffer;
     }
 };
 

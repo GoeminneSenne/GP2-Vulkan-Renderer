@@ -5,7 +5,7 @@ set(SOURCES
  "src/InstanceBuilder.cpp" 
  "src/Instance.cpp"
   
- "src/PhysicalDeviceSelector.cpp" "src/LogicalDeviceBuilder.cpp" "src/LogicalDevice.cpp" "src/Swapchain.cpp" "src/SwapchainSupportDetails.cpp" "src/Image.cpp" "src/ShaderLoader.cpp")
+ "src/PhysicalDeviceSelector.cpp" "src/LogicalDeviceBuilder.cpp" "src/LogicalDevice.cpp" "src/Swapchain.cpp" "src/SwapchainSupportDetails.cpp" "src/Image.cpp" "src/ShaderLoader.cpp" "src/SamplerBuilder.cpp")
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
