@@ -13,6 +13,8 @@ namespace dae
 		static Image WrapSwapchainImage(const LogicalDevice& logicalDevice,
 			VkImage swapchainImage, VkFormat format, VkExtent2D extent);
 
+		void Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
+
 		VkImage image = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
 		VkImageView view = VK_NULL_HANDLE;

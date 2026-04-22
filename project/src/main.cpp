@@ -293,7 +293,7 @@ private:
         for (auto framebuffer : swapChainFramebuffers)
             vkDestroyFramebuffer(m_logicalDevice.device, framebuffer, nullptr);
 
-        m_swapchain.Cleanup(m_logicalDevice);
+        m_swapchain.Cleanup(m_logicalDevice, allocator);
     }
 
     void recreateSwapChain()

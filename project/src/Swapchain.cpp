@@ -75,12 +75,16 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	this->extent = extent;
 }
 
-void dae::Swapchain::Cleanup(const LogicalDevice& logicalDevice)
+void dae::Swapchain::Cleanup(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
 {
-	//TODO: aanpassen zodat destroy van Image called wordt
-	for (auto image : images)
-		vkDestroyImageView(logicalDevice.device, image.view, nullptr);
+	for (auto& image : images)
+	{
+		image.Destroy(logicalDevice, allocator);
+	}
 
-	//TODO if check VK_NULL_HANDLE
-	vkDestroySwapchainKHR(logicalDevice.device, swapchain, nullptr);
+	if (swapchain != VK_NULL_HANDLE)
+	{
+		vkDestroySwapchainKHR(logicalDevice.device, swapchain, nullptr);
+	}
+
 }
