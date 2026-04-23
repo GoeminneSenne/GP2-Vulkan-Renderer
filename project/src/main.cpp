@@ -165,22 +165,7 @@ private:
     Image m_textureImage{};
     Sampler m_sampler{};
 
-    /*
-    uint32_t mipLevels{};
-    VkImage textureImage{};
-    VkDeviceMemory textureImageMemory{};
-    VmaAllocation textureImageAllocation{};
-    VkImageView textureImageView{};
-	*/
-
     Image m_depthImage{};
-
-    /*
-    VkImage depthImage{};
-    VkDeviceMemory depthImageMemory{};
-    VmaAllocation depthImageAllocation{};
-    VkImageView depthImageView{};
-	*/
 
     void initVulkan() 
 	{
@@ -196,7 +181,6 @@ private:
         createDepthResources();
         createFramebuffers();
         createTextureImage();
-        //createTextureImageView();
         CreateTextureSampler();
         loadModel();
         createVertexBuffer();
@@ -225,9 +209,6 @@ private:
 
         m_sampler.Destroy(m_logicalDevice);
         m_textureImage.Destroy(m_logicalDevice, allocator);
-
-        //vkDestroyImageView(m_logicalDevice.device, textureImageView, nullptr);
-        //vmaDestroyImage(allocator, textureImage, textureImageAllocation);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -308,8 +289,6 @@ private:
 
     void cleanupSwapChain()
     {
-        //vkDestroyImageView(m_logicalDevice.device, depthImageView, nullptr);
-        //vmaDestroyImage(allocator, depthImage, depthImageAllocation);
         m_depthImage.Destroy(m_logicalDevice, allocator);
 
 
@@ -640,7 +619,7 @@ private:
         m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
-    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
+    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
     {
 	    for (VkFormat format : candidates)
 	    {
@@ -660,7 +639,7 @@ private:
         throw std::runtime_error("failed to find supported format!");
     }
 
-    VkFormat findDepthFormat()
+    VkFormat findDepthFormat() const
     {
         return findSupportedFormat(
             { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
@@ -669,7 +648,7 @@ private:
         );
     }
 
-    bool hasStencilComponent(VkFormat format)
+    bool hasStencilComponent(VkFormat format) const
     {
         return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
     }
@@ -778,7 +757,7 @@ private:
 
                 vertex.color = { 1.f, 1.f, 1.f }; 
 
-                if (uniqueVertices.count(vertex) == 0)
+                if (!uniqueVertices.contains(vertex))
                 {
                     uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
                     vertices.push_back(vertex);
@@ -844,16 +823,15 @@ private:
 
     void createUniformBuffers()
     {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-
-        m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+	    m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
+	        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-	            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-	            m_uniformBuffers[i]);
+	                                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+	                                    m_uniformBuffers[i]);
 
             vmaMapMemory(allocator, m_uniformBuffers[i].allocation , &uniformBuffersMapped[i]);
         }
@@ -926,7 +904,7 @@ private:
         }
     }
 
-    void UpdateUniformBuffer(uint32_t currentImage)
+    void UpdateUniformBuffer(uint32_t currentImage) const
     {
         static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -943,7 +921,7 @@ private:
     }
 
     //Record Render Command Buffer
-    void recordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
+    void recordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex) const
     {
         commandBuffer.Begin();
 
@@ -1099,7 +1077,7 @@ int main() {
         app.run();
     }
     catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << '\n';
         return EXIT_FAILURE;
     }
 
