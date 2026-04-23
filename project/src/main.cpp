@@ -60,6 +60,7 @@
 #include "Shader.h"
 #include "CommandBuffer.h"
 #include "CommandPool.h"
+#include "Buffer.h"
 
 using namespace dae;
 
