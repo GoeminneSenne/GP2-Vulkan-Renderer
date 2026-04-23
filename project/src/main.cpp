@@ -62,6 +62,8 @@
 #include "CommandPool.h"
 #include "Buffer.h"
 #include "BufferHelpers.h"
+#include "ImageBuilder.h"
+#include "ImageHelpers.h"
 
 using namespace dae;
 
@@ -163,18 +165,22 @@ private:
     Image m_textureImage{};
     Sampler m_sampler{};
 
+    /*
     uint32_t mipLevels{};
     VkImage textureImage{};
     VkDeviceMemory textureImageMemory{};
     VmaAllocation textureImageAllocation{};
     VkImageView textureImageView{};
+	*/
 
     Image m_depthImage{};
 
+    /*
     VkImage depthImage{};
     VkDeviceMemory depthImageMemory{};
     VmaAllocation depthImageAllocation{};
     VkImageView depthImageView{};
+	*/
 
     void initVulkan() 
 	{
@@ -190,7 +196,7 @@ private:
         createDepthResources();
         createFramebuffers();
         createTextureImage();
-        createTextureImageView();
+        //createTextureImageView();
         CreateTextureSampler();
         loadModel();
         createVertexBuffer();
@@ -218,9 +224,10 @@ private:
         cleanupSwapChain();
 
         m_sampler.Destroy(m_logicalDevice);
-        vkDestroyImageView(m_logicalDevice.device, textureImageView, nullptr);
+        m_textureImage.Destroy(m_logicalDevice, allocator);
 
-        vmaDestroyImage(allocator, textureImage, textureImageAllocation);
+        //vkDestroyImageView(m_logicalDevice.device, textureImageView, nullptr);
+        //vmaDestroyImage(allocator, textureImage, textureImageAllocation);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -301,8 +308,10 @@ private:
 
     void cleanupSwapChain()
     {
-        vkDestroyImageView(m_logicalDevice.device, depthImageView, nullptr);
-        vmaDestroyImage(allocator, depthImage, depthImageAllocation);
+        //vkDestroyImageView(m_logicalDevice.device, depthImageView, nullptr);
+        //vmaDestroyImage(allocator, depthImage, depthImageAllocation);
+        m_depthImage.Destroy(m_logicalDevice, allocator);
+
 
         for (auto framebuffer : swapChainFramebuffers)
             vkDestroyFramebuffer(m_logicalDevice.device, framebuffer, nullptr);
@@ -570,7 +579,7 @@ private:
 
         for (size_t i = 0; i < m_swapchain.images.size(); ++i)
         {
-	        std::array<VkImageView, 2> attachments = {m_swapchain.images[i].view, depthImageView};
+	        std::array<VkImageView, 2> attachments = {m_swapchain.images[i].view, m_depthImage.view};
         
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -600,6 +609,7 @@ private:
         );
     }
 
+    /*
     void transitionImageLayout(VkImage image, VkFormat format, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
         VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
     {
@@ -625,6 +635,7 @@ private:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
+            //TODO: check of dit nodig of hoe je dit moet doen met Image wrapper
             if (hasStencilComponent(format))
             {
                 barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -634,6 +645,58 @@ private:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         }
+
+        vkCmdPipelineBarrier(
+            commandBuffer.commandBuffer,
+            sourceStage, destinationStage,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
+
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
+    }
+	*/
+
+    void transitionImageLayout(Image& image, VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
+        VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout)
+    {
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = image.image;
+        barrier.subresourceRange.aspectMask = image.aspectMask;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = image.mipLevels;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.srcAccessMask = srcAccessMask;
+        barrier.dstAccessMask = dstAccessMask;
+
+        //TODO aanpassen dat aspectMask een onderdeel van Image is
+        /*
+    	if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+            //TODO: check of dit nodig of hoe je dit moet doen met Image wrapper
+            if (hasStencilComponent(format))
+            {
+                barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+        }
+        else
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+		*/
 
         vkCmdPipelineBarrier(
             commandBuffer.commandBuffer,
@@ -670,6 +733,7 @@ private:
         m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
+    /*
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling,
         VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory, VmaAllocation& imageAllocation, VmaMemoryUsage allocUsage, VmaAllocationCreateFlags allocFlags)
     {
@@ -695,18 +759,41 @@ private:
         if (vmaCreateImage(allocator, &imageInfo, &allocInfo, &image, &imageAllocation, nullptr) != VK_SUCCESS)
             throw std::runtime_error("failed to create image!");
     }
+	*/
 
     void createDepthResources()
     {
         VkFormat depthFormat = findDepthFormat();
 
-        createImage(m_swapchain.extent.width, m_swapchain.extent.height, 1, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory, depthImageAllocation, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0);
-        depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (hasStencilComponent(depthFormat))
+        {
+            aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
 
-        transitionImageLayout(depthImage, depthFormat, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+
+        ImageBuilder imageBuilder = {};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(depthFormat)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+            .SetAspectMask(aspectMask)
+    	    .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .SetAllocFlags(0)
+            .Build(allocator, m_logicalDevice, m_depthImage);
+
+        /*
+        transitionImageLayout(m_depthImage.image, depthFormat, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
             0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+		*/
+
+        transitionImageLayout(m_depthImage, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+            0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features)
@@ -767,23 +854,51 @@ private:
 
         stbi_image_free(pixels);
 
-        mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+        uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
-        createImage(texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+        ImageBuilder imageBuilder = {};
+        imageBuilder
+            .SetWidth(texWidth)
+            .SetHeight(texHeight)
+            .SetMipLevels(mipLevels)
+            .SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO)
+            .SetAllocFlags(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT)
+            .Build(allocator, m_logicalDevice, m_textureImage);
+
+        /*
+    	createImage(texWidth, texHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             textureImage, textureImageMemory, textureImageAllocation, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
 
-        transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+        transitionImageLayout(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB,
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    	copyBufferToImage(stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+		*/
+
+        transitionImageLayout(m_textureImage, 
+            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    	copyBufferToImage(stagingBuffer.buffer, m_textureImage.image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
         stagingBuffer.Destroy(allocator);
 
-        generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+        /*
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        ImageHelpers::GenerateMipmaps(commandBuffer, m_physicalDevice, m_textureImage);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
+		*/
+
+        generateMipmaps(m_textureImage.image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
     }
 
+    
     void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
         // Check if image format supports linear blitting
         VkFormatProperties formatProperties;
@@ -870,6 +985,7 @@ private:
 
         m_commandPool.EndSingleTimeCommand(commandBuffer);
     }
+	
 
     VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
     {
@@ -892,10 +1008,12 @@ private:
         return imageView;
     }
 
+    /*
     void createTextureImageView()
     {
         textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
     }
+	*/
 
     void CreateTextureSampler()
     {
@@ -1065,7 +1183,7 @@ private:
 
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = textureImageView;
+            imageInfo.imageView = m_textureImage.view;
             imageInfo.sampler = m_sampler.sampler;
 
             std::array<VkWriteDescriptorSet, 2> descriptorWrites{};

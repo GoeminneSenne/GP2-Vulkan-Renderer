@@ -4,7 +4,7 @@
 #include "Image.h"
 #include "ImageHelpers.h"
 
-void dae::ImageBuilder::Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image)
+void dae::ImageBuilder::Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image) const
 {
 
 	//Set extra info from Image struct

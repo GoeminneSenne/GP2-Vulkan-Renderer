@@ -13,7 +13,7 @@ namespace dae
 	{
 	public:
 
-		void Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image);
+		void Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image) const;
 
 		ImageBuilder& SetWidth(uint32_t width);
 		ImageBuilder& SetHeight(uint32_t height);
