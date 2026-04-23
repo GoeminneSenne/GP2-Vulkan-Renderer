@@ -602,6 +602,7 @@ private:
         );
     }
 
+	/*
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage allocUsage, VmaAllocationCreateFlags allocFlags,
         VkBuffer& buffer, VmaAllocation& allocation) const
 {
@@ -616,8 +617,9 @@ private:
         allocInfo.flags = allocFlags;
 
         if (vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS)
-            throw std::runtime_error("failed to allocate buffer!");
+			throw std::runtime_error("failed to allocate buffer!");
 }
+*/
 
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
         VkImageCreateInfo imageInfo{};
@@ -807,17 +809,17 @@ private:
         if (!pixels)
             throw std::runtime_error("failed to load texture image!");
 
-        VkBuffer stagingBuffer;
-        VmaAllocation stagingBufferAllocation;
 
-        createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        Buffer stagingBuffer;
+
+        BufferHelpers::CreateBuffer(allocator, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            stagingBuffer, stagingBufferAllocation);
+            stagingBuffer);
 
         void* data;
-        vmaMapMemory(allocator, stagingBufferAllocation, &data);
+        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vmaUnmapMemory(allocator, stagingBufferAllocation);
+        vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
         stbi_image_free(pixels);
 
@@ -831,9 +833,9 @@ private:
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    	copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+    	copyBufferToImage(stagingBuffer.buffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
-        vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
+        stagingBuffer.Destroy(allocator);
 
         generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
     }
@@ -1016,18 +1018,17 @@ private:
 
         Buffer stagingBuffer;
 
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            stagingBuffer.buffer, stagingBuffer.allocation);
+            stagingBuffer);
 
         void* data;
         vmaMapMemory(allocator, stagingBuffer.allocation, &data);
         memcpy(data, vertices.data(), (size_t)bufferSize);
         vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VMA_MEMORY_USAGE_AUTO, 0,
-            m_vertexBuffer.buffer, m_vertexBuffer.allocation);
+        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VMA_MEMORY_USAGE_AUTO, 0, m_vertexBuffer);
 
 
         CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
@@ -1043,18 +1044,18 @@ private:
 
         Buffer stagingBuffer;
 
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,VMA_MEMORY_USAGE_AUTO,
+        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            stagingBuffer.buffer, stagingBuffer.allocation);
+            stagingBuffer);
 
         void* data;
         vmaMapMemory(allocator, stagingBuffer.allocation, &data);
         memcpy(data, indices.data(), (size_t)bufferSize);
         vmaUnmapMemory(allocator, stagingBuffer.allocation);
-        
-        createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+
+        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
-            m_indexBuffer.buffer, m_indexBuffer.allocation);
+            m_indexBuffer);
 
         CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
         BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_indexBuffer, bufferSize);
@@ -1072,9 +1073,9 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                m_uniformBuffers[i].buffer, m_uniformBuffers[i].allocation);
+	        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
+	            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+	            m_uniformBuffers[i]);
 
             vmaMapMemory(allocator, m_uniformBuffers[i].allocation , &uniformBuffersMapped[i]);
         }

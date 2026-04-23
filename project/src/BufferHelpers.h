@@ -8,6 +8,29 @@ namespace dae
 {
 	namespace BufferHelpers
 	{
+		//TODO misschien toch BufferBuilder maken
+		inline void CreateBuffer(const VmaAllocator& allocator, VkDeviceSize size, VkBufferUsageFlags usage, 
+			VmaMemoryUsage allocUsage, VmaAllocationCreateFlags allocFlags,
+			Buffer& buffer)
+		{
+			VkBufferCreateInfo bufferInfo{};
+			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bufferInfo.size = size;
+			bufferInfo.usage = usage;
+			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+			VmaAllocationCreateInfo allocInfo{};
+			allocInfo.usage = allocUsage;
+			allocInfo.flags = allocFlags;
+
+			LOG_VULKAN_ERROR(
+				vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.allocation, nullptr),
+				"failed to allocate buffer!"
+			);
+
+			buffer.size = size;
+		}
+
 		inline void CopyBuffer(const CommandBuffer& commandBuffer, const Buffer& srcBuffer, const Buffer& dstBuffer, VkDeviceSize size)
 		{
 			VkBufferCopy copyRegion{};
