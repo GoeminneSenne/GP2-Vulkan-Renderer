@@ -61,6 +61,7 @@
 #include "CommandBuffer.h"
 #include "CommandPool.h"
 #include "Buffer.h"
+#include "BufferHelpers.h"
 
 using namespace dae;
 
@@ -618,19 +619,6 @@ private:
             throw std::runtime_error("failed to allocate buffer!");
 }
 
-
-    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-    {
-        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
-
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(commandBuffer.commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
-    }
-
     void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1025,51 +1013,54 @@ private:
     void createVertexBuffer()
     {
         VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-        
-        VkBuffer stagingBuffer;
-        VmaAllocation stagingBufferAllocation;
+
+        Buffer stagingBuffer;
 
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            stagingBuffer, stagingBufferAllocation);
+            stagingBuffer.buffer, stagingBuffer.allocation);
 
         void* data;
-        vmaMapMemory(allocator, stagingBufferAllocation, &data);
+        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
         memcpy(data, vertices.data(), (size_t)bufferSize);
-        vmaUnmapMemory(allocator, stagingBufferAllocation);
+        vmaUnmapMemory(allocator, stagingBuffer.allocation);
 
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
             m_vertexBuffer.buffer, m_vertexBuffer.allocation);
 
-        copyBuffer(stagingBuffer, m_vertexBuffer.buffer, bufferSize);
 
-        vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_vertexBuffer, bufferSize);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
+
+        stagingBuffer.Destroy(allocator);
     }
 
     void createIndexBuffer()
     {
         VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
-        VkBuffer stagingBuffer;
-        VmaAllocation stagingBufferAllocation;
+        Buffer stagingBuffer;
 
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            stagingBuffer, stagingBufferAllocation);
+            stagingBuffer.buffer, stagingBuffer.allocation);
 
         void* data;
-        vmaMapMemory(allocator, stagingBufferAllocation, &data);
+        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
         memcpy(data, indices.data(), (size_t)bufferSize);
-        vmaUnmapMemory(allocator, stagingBufferAllocation);
+        vmaUnmapMemory(allocator, stagingBuffer.allocation);
         
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
             m_indexBuffer.buffer, m_indexBuffer.allocation);
 
-        copyBuffer(stagingBuffer, m_indexBuffer.buffer, bufferSize);
+        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_indexBuffer, bufferSize);
+        m_commandPool.EndSingleTimeCommand(commandBuffer);
 
-        vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
+        stagingBuffer.Destroy(allocator);
     }
 
     void createUniformBuffers()
