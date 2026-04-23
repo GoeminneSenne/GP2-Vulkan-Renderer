@@ -7,12 +7,13 @@
 namespace dae
 {
 	struct Image;
+	struct LogicalDevice;
 
 	class ImageBuilder final
 	{
 	public:
 
-		void Build(Image& image);
+		void Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image);
 
 		ImageBuilder& SetWidth(uint32_t width);
 		ImageBuilder& SetHeight(uint32_t height);

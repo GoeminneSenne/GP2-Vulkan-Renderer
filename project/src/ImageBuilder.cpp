@@ -1,11 +1,46 @@
 #include "ImageBuilder.h"
 
-void dae::ImageBuilder::Build(Image& image)
+#include "Common.h"
+#include "Image.h"
+#include "ImageHelpers.h"
+
+void dae::ImageBuilder::Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image)
 {
+
 	//Set extra info from Image struct
+	image.format = m_format;
+	image.extent.width = m_width;
+	image.extent.height = m_height;
+	image.aspectMask = m_aspectMask;
+	image.mipLevels = m_mipLevels;
+
 	//Create VkImage
+	VkImageCreateInfo imageInfo{};
+	imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageInfo.extent.width = m_width;
+	imageInfo.extent.height = m_height;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = m_mipLevels;
+	imageInfo.arrayLayers = 1;
+	imageInfo.format = m_format;
+	imageInfo.tiling = m_tiling;
+	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageInfo.usage = m_usageFlags;
+	imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VmaAllocationCreateInfo allocInfo{};
+	allocInfo.usage = m_allocUsage;
+	allocInfo.flags = m_allocFlags;
+
+	LOG_VULKAN_ERROR(
+		vmaCreateImage(allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, nullptr),
+		"failed to create image!"
+	);
+
 	//Create ImageView
-	//Generate mipmaps -> als nodig
+	ImageHelpers::CreateImageView(logicalDevice, image);
 }
 
 dae::ImageBuilder& dae::ImageBuilder::SetWidth(uint32_t width)
