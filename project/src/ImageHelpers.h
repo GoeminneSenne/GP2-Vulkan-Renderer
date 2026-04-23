@@ -129,5 +129,35 @@ namespace dae
 				0, nullptr,
 				1, &barrier);
 		}
+
+		inline void transitionImageLayout(const CommandBuffer& commandBuffer, const Image& image, 
+			VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
+			VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
+			VkImageLayout oldLayout, VkImageLayout newLayout)
+		{
+			VkImageMemoryBarrier barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = oldLayout;
+			barrier.newLayout = newLayout;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = image.image;
+			barrier.subresourceRange.aspectMask = image.aspectMask;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = image.mipLevels;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.srcAccessMask = srcAccessMask;
+			barrier.dstAccessMask = dstAccessMask;
+
+			vkCmdPipelineBarrier(
+				commandBuffer.commandBuffer,
+				sourceStage, destinationStage,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+		}
 	}
 }
