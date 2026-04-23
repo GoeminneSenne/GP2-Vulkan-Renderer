@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vk_mem_alloc.h>
+
 namespace dae
 {
 	struct Buffer final
@@ -9,7 +11,7 @@ namespace dae
 		VmaAllocation allocation = nullptr;
 		VkDeviceSize size = 0;
 
-		void Destroy(VmaAllocator allocator)
+		void Destroy(VmaAllocator allocator) const
 		{
 			if (buffer != VK_NULL_HANDLE && allocation != nullptr)
 			{
