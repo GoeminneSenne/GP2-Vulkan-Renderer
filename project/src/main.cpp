@@ -152,13 +152,16 @@ private:
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    VkBuffer vertexBuffer{};
-    VmaAllocation vertexAllocation{};
-    VkBuffer indexBuffer{};
-    VmaAllocation indexAllocation{};
+    
+    Buffer m_vertexBuffer{};
+    Buffer m_indexBuffer{};
 
+    std::vector<Buffer> m_uniformBuffers;
+
+    /*
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VmaAllocation> uniformBuffersAllocation;
+    */
     std::vector<void*> uniformBuffersMapped;
 
     uint32_t mipLevels{};
@@ -222,16 +225,16 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            vmaUnmapMemory(allocator, uniformBuffersAllocation[i]);
-            vmaDestroyBuffer(allocator, uniformBuffers[i], uniformBuffersAllocation[i]);
+            vmaUnmapMemory(allocator, m_uniformBuffers[i].allocation);
+            m_uniformBuffers[i].Destroy(allocator);
         }
 
         vkDestroyDescriptorPool(m_logicalDevice.device, descriptorPool, nullptr);
 
         vkDestroyDescriptorSetLayout(m_logicalDevice.device, descriptorSetLayout, nullptr);
 
-        vmaDestroyBuffer(allocator, indexBuffer, indexAllocation);
-        vmaDestroyBuffer(allocator, vertexBuffer, vertexAllocation);
+        m_indexBuffer.Destroy(allocator);
+        m_vertexBuffer.Destroy(allocator);
 
         vmaDestroyAllocator(allocator);
 
@@ -1037,9 +1040,9 @@ private:
 
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
-            vertexBuffer, vertexAllocation);
+            m_vertexBuffer.buffer, m_vertexBuffer.allocation);
 
-        copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+        copyBuffer(stagingBuffer, m_vertexBuffer.buffer, bufferSize);
 
         vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
     }
@@ -1062,9 +1065,9 @@ private:
         
         createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
-            indexBuffer, indexAllocation);
+            m_indexBuffer.buffer, m_indexBuffer.allocation);
 
-        copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+        copyBuffer(stagingBuffer, m_indexBuffer.buffer, bufferSize);
 
         vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
     }
@@ -1073,17 +1076,16 @@ private:
     {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
-        uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersAllocation.resize(MAX_FRAMES_IN_FLIGHT);
+        m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
         uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
                 VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                uniformBuffers[i], uniformBuffersAllocation[i]);
+                m_uniformBuffers[i].buffer, m_uniformBuffers[i].allocation);
 
-            vmaMapMemory(allocator, uniformBuffersAllocation[i], &uniformBuffersMapped[i]);
+            vmaMapMemory(allocator, m_uniformBuffers[i].allocation , &uniformBuffersMapped[i]);
         }
     }
 
@@ -1121,7 +1123,7 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.buffer = m_uniformBuffers[i].buffer;
             bufferInfo.offset = 0;
             bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -1221,11 +1223,11 @@ private:
         scissor.extent = m_swapchain.extent;
         vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
 
-        VkBuffer vertexBuffers[] = {vertexBuffer};
+        VkBuffer vertexBuffers[] = {m_vertexBuffer.buffer};
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(commandBuffer.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer.commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer.commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
         vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
         
