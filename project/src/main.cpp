@@ -76,6 +76,7 @@
 #include "RenderPassBuilder.h"
 #include "GraphicsPipeline.h"
 #include "GraphicsPipelineLayout.h"
+#include "GraphicsPipelineLayoutBuilder.h"
 
 
 using namespace dae;
@@ -448,15 +449,10 @@ private:
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &m_descriptorSetLayout.layout;
-        pipelineLayoutInfo.pushConstantRangeCount = 0;
-        pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-        if (vkCreatePipelineLayout(m_logicalDevice.device, &pipelineLayoutInfo, nullptr, &m_graphicsPipelineLayout.layout) != VK_SUCCESS)
-            throw std::runtime_error("failed to create pipeline layout!");
+        GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
+        pipelineLayoutBuilder
+            .AddDescriptorSetLayout(m_descriptorSetLayout)
+            .Build(m_logicalDevice, m_graphicsPipelineLayout);
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
