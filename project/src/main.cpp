@@ -72,6 +72,7 @@
 #include "Fence.h"
 #include "Semaphore.h"
 #include "SwapchainHelpers.h"
+#include "RenderPass.h"
 
 
 using namespace dae;
@@ -143,7 +144,7 @@ private:
 
     Swapchain m_swapchain{};
 
-    VkRenderPass renderPass{};
+    RenderPass m_renderPass{};
     
 	DescriptorSetLayout m_descriptorSetLayout{};
     DescriptorPool m_descriptorPool;
@@ -158,10 +159,6 @@ private:
     std::vector<Semaphore> m_imageAvailableSemaphores;
     std::vector<Semaphore> m_renderFinishedSemaphores;
     std::vector<Fence> m_inFlightFences;
-
-    //std::vector<VkSemaphore> imageAvailableSemaphores;
-    //std::vector<VkSemaphore> renderFinishedSemaphores;
-    //std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
     VmaAllocator allocator{};
@@ -192,7 +189,7 @@ private:
         m_commandPool.CreateCommandPool(m_physicalDevice, &m_logicalDevice);
     	createVmaAllocator();
         createDepthResources();
-        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, renderPass, m_depthImage, m_swapchain);
+        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, m_renderPass, m_depthImage, m_swapchain);
         createTextureImage();
         CreateTextureSampler();
         loadModel();
@@ -240,23 +237,17 @@ private:
         vkDestroyPipeline(m_logicalDevice.device, graphicsPipeline, nullptr);
         vkDestroyPipelineLayout(m_logicalDevice.device, pipelineLayout, nullptr);
 
-        vkDestroyRenderPass(m_logicalDevice.device, renderPass, nullptr);
+        m_renderPass.Destroy(m_logicalDevice);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             m_imageAvailableSemaphores[i].Destroy(m_logicalDevice);
             m_inFlightFences[i].Destroy(m_logicalDevice);
-
-            //vkDestroySemaphore(m_logicalDevice.device, imageAvailableSemaphores[i], nullptr);
-            //vkDestroyFence(m_logicalDevice.device, inFlightFences[i], nullptr);
-
         }
 
         for (const auto& semaphore : m_renderFinishedSemaphores)
         {
             semaphore.Destroy(m_logicalDevice);
-
-            //vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
         }
 
         m_commandPool.Destroy();
@@ -324,28 +315,15 @@ private:
 
         m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
         createDepthResources();
-        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, renderPass, m_depthImage, m_swapchain);
+        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, m_renderPass, m_depthImage, m_swapchain);
 
 
         //Semaphore reconstruction
         //TODO: should be in seperate function or handled elsewhere??
-        /*
-        m_renderFinishedSemaphores.resize(m_swapchain.images.size());
-
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		*/
-
         for (auto& semaphore : m_renderFinishedSemaphores)
         {
             semaphore.Destroy(m_logicalDevice);
             semaphore.Create(m_logicalDevice);
-            /*
-            if (semaphore != VK_NULL_HANDLE)
-                vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
-
-            vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &semaphore);
-			*/
         }
     }
 
@@ -404,7 +382,7 @@ private:
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(m_logicalDevice.device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+        if (vkCreateRenderPass(m_logicalDevice.device, &renderPassInfo, nullptr, &m_renderPass.renderPass) != VK_SUCCESS)
             throw std::runtime_error("failed to create render pass!");
     }
 
@@ -537,7 +515,7 @@ private:
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
         pipelineInfo.layout = pipelineLayout;
-        pipelineInfo.renderPass = renderPass;
+        pipelineInfo.renderPass = m_renderPass.renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
@@ -860,7 +838,7 @@ private:
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.renderPass = m_renderPass.renderPass;
         renderPassInfo.framebuffer = m_swapchain.framebuffers[imageIndex].framebuffer;
         renderPassInfo.renderArea.offset = { 0,0 };
         renderPassInfo.renderArea.extent = m_swapchain.extent;
@@ -923,30 +901,17 @@ private:
         {
             m_imageAvailableSemaphores[i].Create(m_logicalDevice);
             m_inFlightFences[i].Create(m_logicalDevice);
-
-            /*
-        	if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                //vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(m_logicalDevice.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create semaphores!");
-	        */
         }
 
         for (size_t i = 0; i < m_swapchain.images.size(); ++i)
         {
             m_renderFinishedSemaphores[i].Create(m_logicalDevice);
-
-            /*
-	        if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create semaphore");
-			*/
         }
 
     }
 
     void drawFrame()
     {
-        //vkWaitForFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
         m_inFlightFences[currentFrame].Wait(m_logicalDevice);
 
         uint32_t imageIndex;
@@ -962,7 +927,6 @@ private:
 
         UpdateUniformBuffer(currentFrame);
 
-        //vkResetFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame]);
         m_inFlightFences[currentFrame].Reset(m_logicalDevice);
 
         ///Record
@@ -988,11 +952,6 @@ private:
 
         m_logicalDevice.graphicsQueue.Submit(submitInfo, m_inFlightFences[currentFrame]);
 
-        /*
-        if (vkQueueSubmit(m_logicalDevice.graphicsQueue, 1, &submitInfo, m_inFlightFences[currentFrame].Get()) != VK_SUCCESS)
-            throw std::runtime_error("failed to submit draw command buffer!");
-	*/
-
         ///Present
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1006,7 +965,6 @@ private:
         presentInfo.pImageIndices = &imageIndex;
 
         result = m_logicalDevice.presentQueue.Present(presentInfo);
-        //result = vkQueuePresentKHR(m_logicalDevice.presentQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.wasResized)
         {

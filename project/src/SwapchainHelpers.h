@@ -5,6 +5,7 @@
 #include "FramebufferBuilder.h"
 #include "ImageHelpers.h"
 #include "LogicalDevice.h"
+#include "RenderPass.h"
 
 namespace dae
 {
@@ -25,7 +26,7 @@ namespace dae
 			return image;
 		}
 
-		inline void CreateFramebuffers(const LogicalDevice& logicalDevice, const VkRenderPass& renderPass, const Image& depthImage, Swapchain& swapchain)
+		inline void CreateFramebuffers(const LogicalDevice& logicalDevice, const RenderPass& renderPass, const Image& depthImage, Swapchain& swapchain)
 		{
 			swapchain.framebuffers.resize(swapchain.images.size());
 
@@ -35,7 +36,7 @@ namespace dae
 
 				FramebufferBuilder framebufferBuilder = {};
 				framebufferBuilder
-					.SetRenderPass(renderPass)
+					.SetRenderPass(renderPass.renderPass)
 					.SetAttachments(attachments)
 					.SetWidth(swapchain.extent.width)
 					.SetHeight(swapchain.extent.height)
