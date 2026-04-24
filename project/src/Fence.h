@@ -9,6 +9,8 @@ namespace dae
 	class Fence final
 	{
 	public:
+		Fence() = default;
+
 		void Create(const LogicalDevice& logicalDevice);
 		void Destroy(const LogicalDevice& logicalDevice) const;
 		void Wait(const LogicalDevice& logicalDevice) const;

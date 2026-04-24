@@ -52,11 +52,8 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 		"failed to create logical device!"
 	);
 
-	logicalDevice.graphicsFamily = familyIndices.graphicsFamily.value();
-	logicalDevice.presentFamily = familyIndices.presentFamily.value();
-
-	vkGetDeviceQueue(logicalDevice.device, logicalDevice.graphicsFamily, 0, &logicalDevice.graphicsQueue);
-	vkGetDeviceQueue(logicalDevice.device, logicalDevice.presentFamily, 0, &logicalDevice.presentQueue);
+	logicalDevice.graphicsQueue = InitQueue(logicalDevice, familyIndices.graphicsFamily.value());
+	logicalDevice.presentQueue = InitQueue(logicalDevice, familyIndices.presentFamily.value());
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::EnablebleAnisotropy(bool enable)
@@ -93,4 +90,12 @@ dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::UseValidation(bool use)
 {
 	useValidation = true;
 	return *this;
+}
+
+dae::Queue dae::LogicalDeviceBuilder::InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const
+{
+	VkQueue rawQueue;
+	vkGetDeviceQueue(logicalDevice.device, queueFamily, 0, &rawQueue);
+
+	return {rawQueue, queueFamily};
 }

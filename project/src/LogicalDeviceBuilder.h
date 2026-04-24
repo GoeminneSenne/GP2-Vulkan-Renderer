@@ -24,6 +24,8 @@ namespace dae
 		LogicalDeviceBuilder& UseValidation(bool use);
 
 	private:
+		Queue InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const;
+
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		std::vector<const char*> deviceExtensions{};
 		std::vector<const char*> validationLayers{};

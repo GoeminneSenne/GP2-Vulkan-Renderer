@@ -986,8 +986,12 @@ private:
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
+        m_logicalDevice.graphicsQueue.Submit(submitInfo, m_inFlightFences[currentFrame]);
+
+        /*
         if (vkQueueSubmit(m_logicalDevice.graphicsQueue, 1, &submitInfo, m_inFlightFences[currentFrame].Get()) != VK_SUCCESS)
             throw std::runtime_error("failed to submit draw command buffer!");
+	*/
 
         ///Present
         VkPresentInfoKHR presentInfo{};
@@ -1001,7 +1005,8 @@ private:
         presentInfo.pSwapchains = swapChains;
         presentInfo.pImageIndices = &imageIndex;
 
-        result = vkQueuePresentKHR(m_logicalDevice.presentQueue, &presentInfo);
+        result = m_logicalDevice.presentQueue.Present(presentInfo);
+        //result = vkQueuePresentKHR(m_logicalDevice.presentQueue, &presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.wasResized)
         {

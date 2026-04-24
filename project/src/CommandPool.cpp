@@ -110,8 +110,8 @@ void dae::CommandPool::EndSingleTimeCommand(CommandBuffer& commandBuffer) const
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer.commandBuffer;
 
-	vkQueueSubmit(m_pLogicalDevice->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(m_pLogicalDevice->graphicsQueue);
+	m_pLogicalDevice->graphicsQueue.Submit(submitInfo);
+	vkQueueWaitIdle(m_pLogicalDevice->graphicsQueue.Get());
 
 	vkFreeCommandBuffers(m_pLogicalDevice->device, m_commandPool, 1, &commandBuffer.commandBuffer);
 }
