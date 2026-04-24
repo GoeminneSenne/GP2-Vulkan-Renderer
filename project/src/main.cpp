@@ -74,6 +74,8 @@
 #include "SwapchainHelpers.h"
 #include "RenderPass.h"
 #include "RenderPassBuilder.h"
+#include "GraphicsPipeline.h"
+#include "GraphicsPipelineLayout.h"
 
 
 using namespace dae;
@@ -151,8 +153,11 @@ private:
     DescriptorPool m_descriptorPool;
     std::vector<DescriptorSet> m_descriptorSets;
     
-	VkPipelineLayout pipelineLayout{};
-    VkPipeline graphicsPipeline{};
+    GraphicsPipelineLayout m_graphicsPipelineLayout{};
+    GraphicsPipeline m_graphicsPipeline{};
+
+	//VkPipelineLayout pipelineLayout{};
+    //VkPipeline graphicsPipeline{};
 
     CommandPool m_commandPool{};
     std::vector<CommandBuffer> m_renderCommandBuffers;
@@ -235,8 +240,8 @@ private:
 
         vmaDestroyAllocator(allocator);
 
-        vkDestroyPipeline(m_logicalDevice.device, graphicsPipeline, nullptr);
-        vkDestroyPipelineLayout(m_logicalDevice.device, pipelineLayout, nullptr);
+        m_graphicsPipeline.Destroy(m_logicalDevice);
+        m_graphicsPipelineLayout.Destroy(m_logicalDevice);
 
         m_renderPass.Destroy(m_logicalDevice);
 
@@ -450,7 +455,7 @@ private:
         pipelineLayoutInfo.pushConstantRangeCount = 0;
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-        if (vkCreatePipelineLayout(m_logicalDevice.device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+        if (vkCreatePipelineLayout(m_logicalDevice.device, &pipelineLayoutInfo, nullptr, &m_graphicsPipelineLayout.layout) != VK_SUCCESS)
             throw std::runtime_error("failed to create pipeline layout!");
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -465,14 +470,14 @@ private:
         pipelineInfo.pDepthStencilState = nullptr;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
-        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.layout = m_graphicsPipelineLayout.layout;
         pipelineInfo.renderPass = m_renderPass.renderPass;
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
         pipelineInfo.pDepthStencilState = &depthStencil;
 
-        if (vkCreateGraphicsPipelines(m_logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
+        if (vkCreateGraphicsPipelines(m_logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline.pipeline) != VK_SUCCESS)
             throw std::runtime_error("failed to create graphics pipeline!");
 
         fragmentShader.Destroy(m_logicalDevice);
@@ -803,7 +808,7 @@ private:
 
         vkCmdBeginRenderPass(commandBuffer.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+        vkCmdBindPipeline(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.pipeline);
 
         VkViewport viewport{};
         viewport.x = 0.f;
@@ -825,7 +830,7 @@ private:
 
         vkCmdBindIndexBuffer(commandBuffer.commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
         
     	vkCmdDrawIndexed(commandBuffer.commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
