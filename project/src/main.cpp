@@ -75,6 +75,7 @@
 #include "RenderPass.h"
 #include "RenderPassBuilder.h"
 #include "GraphicsPipeline.h"
+#include "GraphicsPipelineBuilder.h"
 #include "GraphicsPipelineLayout.h"
 #include "GraphicsPipelineLayoutBuilder.h"
 
@@ -364,6 +365,20 @@ private:
         shaderLoader
             .SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_logicalDevice, fragmentShader);
+
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_graphicsPipelineLayout)
+            .SetRenderPass(m_renderPass)
+            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
+            .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
+            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions());
+
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
         vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

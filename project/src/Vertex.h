@@ -19,9 +19,9 @@ namespace dae
 			return bindingDescription;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions()
-		{
-            std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+        static std::vector<VkVertexInputAttributeDescription> GetAttributeDescriptions()
+        {
+            std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
