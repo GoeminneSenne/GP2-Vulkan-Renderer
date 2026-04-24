@@ -3,6 +3,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "Framebuffer.h"
 #include "Image.h"
 
 namespace dae
@@ -22,5 +23,6 @@ namespace dae
 		std::vector<Image> images;
 		VkFormat imageFormat;
 		VkExtent2D extent;
+		std::vector<Framebuffer> framebuffers;
 	};
 }

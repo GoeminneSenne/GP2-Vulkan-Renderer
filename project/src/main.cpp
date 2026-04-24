@@ -69,6 +69,7 @@
 #include "DescriptorPool.h"
 #include "DescriptorSet.h"
 #include "DescriptorSetWriter.h"
+#include "SwapchainHelpers.h"
 
 
 using namespace dae;
@@ -140,7 +141,7 @@ private:
 
     Swapchain m_swapchain{};
 
-    std::vector<VkFramebuffer> swapChainFramebuffers;
+    //std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VkRenderPass renderPass{};
     DescriptorSetLayout m_descriptorSetLayout{};
@@ -185,7 +186,8 @@ private:
         m_commandPool.CreateCommandPool(m_physicalDevice, &m_logicalDevice);
     	createVmaAllocator();
         createDepthResources();
-        createFramebuffers();
+        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, renderPass, m_depthImage, m_swapchain);
+    	//createFramebuffers();
         createTextureImage();
         CreateTextureSampler();
         loadModel();
@@ -295,11 +297,6 @@ private:
     void cleanupSwapChain()
     {
         m_depthImage.Destroy(m_logicalDevice, allocator);
-
-
-        for (auto framebuffer : swapChainFramebuffers)
-            vkDestroyFramebuffer(m_logicalDevice.device, framebuffer, nullptr);
-
         m_swapchain.Destroy(m_logicalDevice, allocator);
     }
 
@@ -318,7 +315,7 @@ private:
 
         m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
         createDepthResources();
-        createFramebuffers();
+        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, renderPass, m_depthImage, m_swapchain);
 
 
         //Semaphore reconstruction
@@ -536,29 +533,6 @@ private:
 
         fragmentShader.Destroy(m_logicalDevice);
         vertexShader.Destroy(m_logicalDevice);
-    }
-
-    void createFramebuffers()
-    {
-        swapChainFramebuffers.resize(m_swapchain.images.size());
-
-
-        for (size_t i = 0; i < m_swapchain.images.size(); ++i)
-        {
-	        std::array<VkImageView, 2> attachments = {m_swapchain.images[i].view, m_depthImage.view};
-        
-            VkFramebufferCreateInfo framebufferInfo{};
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = renderPass;
-            framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-            framebufferInfo.pAttachments = attachments.data();
-            framebufferInfo.width = m_swapchain.extent.width;
-            framebufferInfo.height = m_swapchain.extent.height;
-            framebufferInfo.layers = 1;
-
-            if (vkCreateFramebuffer(m_logicalDevice.device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
-                throw std::runtime_error("failed to create framebuffer!");
-        }
     }
 
     void createVmaAllocator()
@@ -872,7 +846,7 @@ private:
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = renderPass;
-        renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+        renderPassInfo.framebuffer = m_swapchain.framebuffers[imageIndex].framebuffer;
         renderPassInfo.renderArea.offset = { 0,0 };
         renderPassInfo.renderArea.extent = m_swapchain.extent;
 

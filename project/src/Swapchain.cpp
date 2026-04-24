@@ -6,9 +6,10 @@
 #include "PhysicalDevice.h"
 #include "SwapchainSupportDetails.h"
 #include "ImageHelpers.h"
+#include "SwapchainHelpers.h"
 
 void dae::Swapchain::Create(const Window& window, const Instance& instance, 
-	const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice)
+                            const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice)
 {
 	const SwapchainSupportDetails& swapchainSupport = physicalDevice.swapchainSupport;
 
@@ -69,7 +70,7 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	images.resize(imageCount);
 	for (size_t idx{}; idx < imageCount; ++idx)
 	{
-		images[idx] = ImageHelpers::WrapSwapchainImage(logicalDevice, rawImages[idx], surfaceFormat.format, extent);
+		images[idx] = SwapchainHelpers::WrapSwapchainImage(logicalDevice, rawImages[idx], surfaceFormat.format, extent);
 	}
 
 	this->imageFormat = surfaceFormat.format;
@@ -78,6 +79,11 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 
 void dae::Swapchain::Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
 {
+	for (auto& framebuffer : framebuffers)
+	{
+		framebuffer.Destroy(logicalDevice);
+	}
+
 	for (auto& image : images)
 	{
 		image.Destroy(logicalDevice, allocator);
