@@ -1,10 +1,10 @@
 #include "RenderPassBuilder.h"
 
 #include "Common.h"
-#include "LogicalDevice.h"
+#include "Context.h"
 #include "RenderPass.h"
 
-void dae::RenderPassBuilder::Build(const LogicalDevice& logicalDevice, RenderPass& renderPass) const
+void dae::RenderPassBuilder::Build(const Context& context, RenderPass& renderPass) const
 {
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -34,7 +34,7 @@ void dae::RenderPassBuilder::Build(const LogicalDevice& logicalDevice, RenderPas
     renderPassInfo.pDependencies = &dependency;
 
     LOG_VULKAN_ERROR(
-		vkCreateRenderPass(logicalDevice.device, &renderPassInfo, nullptr, &renderPass.renderPass),
+		vkCreateRenderPass(context.logicalDevice.device, &renderPassInfo, nullptr, &renderPass.renderPass),
         "failed to create render pass!"
 	);
 }

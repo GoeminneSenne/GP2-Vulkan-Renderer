@@ -6,12 +6,12 @@
 namespace dae
 {
 	struct RenderPass;
-	struct LogicalDevice;
+	struct Context;
 
 	class RenderPassBuilder final
 	{
 	public:
-		void Build(const LogicalDevice& logicalDevice, RenderPass& renderPass) const;
+		void Build(const Context& context, RenderPass& renderPass) const;
 
 		RenderPassBuilder& AddColorAttachment(VkFormat format);
 		RenderPassBuilder& SetDepthAttachment(VkFormat format);

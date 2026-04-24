@@ -5,13 +5,13 @@
 
 namespace dae
 {
-	struct LogicalDevice;
+	struct Context;
 	struct Shader;
 
 	class ShaderLoader final
 	{
 	public:
-		void Load(const LogicalDevice& logicalDevice, Shader& shader) const;
+		void Load(const Context& context, Shader& shader) const;
 
 		ShaderLoader& SetFilename(std::string filename);
 		ShaderLoader& SetEntryPoint(std::string entryPoint);

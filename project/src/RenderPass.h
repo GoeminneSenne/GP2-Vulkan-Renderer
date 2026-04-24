@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
-#include "LogicalDevice.h"
+#include "Context.h"
 
 namespace dae
 {
@@ -9,9 +9,9 @@ namespace dae
 	{
 		VkRenderPass renderPass = VK_NULL_HANDLE;
 
-		void Destroy(const LogicalDevice& logicalDevice) const
+		void Destroy(const Context& context) const
 		{
-			vkDestroyRenderPass(logicalDevice.device, renderPass, nullptr);
+			vkDestroyRenderPass(context.logicalDevice.device, renderPass, nullptr);
 		}
 	};
 }

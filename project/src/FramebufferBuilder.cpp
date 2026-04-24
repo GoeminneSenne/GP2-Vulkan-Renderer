@@ -1,14 +1,15 @@
 #include "FramebufferBuilder.h"
 
 #include "Common.h"
+#include "Context.h"
 #include "Framebuffer.h"
 #include "LogicalDevice.h"
 
-void dae::FramebufferBuilder::Build(const LogicalDevice& logicalDevice, Framebuffer& framebuffer)
+void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebuffer)
 {
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = m_renderPass;
+    framebufferInfo.renderPass = m_renderPass.renderPass;
     framebufferInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
     framebufferInfo.pAttachments = m_attachments.data();
     framebufferInfo.width = m_width;
@@ -16,7 +17,7 @@ void dae::FramebufferBuilder::Build(const LogicalDevice& logicalDevice, Framebuf
     framebufferInfo.layers = 1;
 
     LOG_VULKAN_ERROR(
-        vkCreateFramebuffer(logicalDevice.device, &framebufferInfo, nullptr, &framebuffer.framebuffer),
+        vkCreateFramebuffer(context.logicalDevice.device, &framebufferInfo, nullptr, &framebuffer.framebuffer),
 		"failed to create framebuffer!"
     );
 
@@ -24,7 +25,7 @@ void dae::FramebufferBuilder::Build(const LogicalDevice& logicalDevice, Framebuf
     framebuffer.attachments = std::move(m_attachments);
 }
 
-dae::FramebufferBuilder& dae::FramebufferBuilder::SetRenderPass(VkRenderPass renderPass)
+dae::FramebufferBuilder& dae::FramebufferBuilder::SetRenderPass(RenderPass renderPass)
 {
 	m_renderPass = renderPass;
 	return *this;

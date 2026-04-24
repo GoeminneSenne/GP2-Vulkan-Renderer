@@ -4,10 +4,10 @@
 #include <stdexcept>
 
 #include "Common.h"
-#include "LogicalDevice.h"
+#include "Context.h"
 #include "Shader.h"
 
-void dae::ShaderLoader::Load(const LogicalDevice& logicalDevice, Shader& shader) const
+void dae::ShaderLoader::Load(const Context& context, Shader& shader) const
 {
 	std::vector<char> code = ReadFile();
 
@@ -17,7 +17,7 @@ void dae::ShaderLoader::Load(const LogicalDevice& logicalDevice, Shader& shader)
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	LOG_VULKAN_ERROR(
-		vkCreateShaderModule(logicalDevice.device, &createInfo, nullptr, &shader.module),
+		vkCreateShaderModule(context.logicalDevice.device, &createInfo, nullptr, &shader.module),
 		"failed to create shader module!"
 	);
 

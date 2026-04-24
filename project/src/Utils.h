@@ -4,6 +4,11 @@
 
 namespace dae
 {
+	struct Context;
+}
+
+namespace dae
+{
 	namespace vkUtils
 	{
 		inline QueueFamilyIndices FindQueueFamilies(const Instance& instance, VkPhysicalDevice device)

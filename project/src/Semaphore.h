@@ -4,13 +4,13 @@
 
 namespace dae
 {
-	struct LogicalDevice;
+	struct Context;
 
 	class Semaphore final
 	{
 	public:
-		void Create(const LogicalDevice& logicalDevice);
-		void Destroy(const LogicalDevice& logicalDevice) const;
+		void Create(const Context& context);
+		void Destroy(const Context& context) const;
 		
 		VkSemaphore Get() const;
 

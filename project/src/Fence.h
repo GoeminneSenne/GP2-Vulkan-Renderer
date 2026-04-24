@@ -4,17 +4,17 @@
 
 namespace dae
 {
-	struct LogicalDevice;
+	struct Context;
 
 	class Fence final
 	{
 	public:
 		Fence() = default;
 
-		void Create(const LogicalDevice& logicalDevice);
-		void Destroy(const LogicalDevice& logicalDevice) const;
-		void Wait(const LogicalDevice& logicalDevice) const;
-		void Reset(const LogicalDevice& logicalDevice) const;
+		void Create(const Context& context);
+		void Destroy(const Context& context) const;
+		void Wait(const Context& context) const;
+		void Reset(const Context& context) const;
 		
 		VkFence Get() const;
 

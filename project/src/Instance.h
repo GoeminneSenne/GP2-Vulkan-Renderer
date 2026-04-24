@@ -11,7 +11,6 @@ namespace dae
 	struct Instance
 	{
 		void Destroy();
-		void CreateSurface(const Window& window);
 
 		VkInstance instance = VK_NULL_HANDLE;
 		VulkanInstanceDebugUtilsFuncTable debugTable; //TODO static maken in common file

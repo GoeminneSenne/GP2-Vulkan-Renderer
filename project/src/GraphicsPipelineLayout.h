@@ -9,11 +9,11 @@ namespace dae
 	{
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 		
-		void Destroy(const LogicalDevice& logicalDevice) const
+		void Destroy(const Context& context) const
 		{
 			if (layout != VK_NULL_HANDLE)
 			{
-				vkDestroyPipelineLayout(logicalDevice.device, layout, nullptr);
+				vkDestroyPipelineLayout(context.logicalDevice.device, layout, nullptr);
 			}
 		}
 	};

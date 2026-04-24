@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
-#include "LogicalDevice.h"
+#include "Context.h"
 
 namespace dae
 {
@@ -9,11 +9,11 @@ namespace dae
 	{
 		VkPipeline pipeline = VK_NULL_HANDLE;
 
-		void Destroy(const LogicalDevice& logicalDevice) const
+		void Destroy(const Context& context) const
 		{
 			if (pipeline != VK_NULL_HANDLE)
 			{
-				vkDestroyPipeline(logicalDevice.device, pipeline, nullptr);
+				vkDestroyPipeline(context.logicalDevice.device, pipeline, nullptr);
 			}
 		}
 	};

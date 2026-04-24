@@ -1,14 +1,14 @@
 #include "DescriptorPool.h"
 
 #include "Common.h"
+#include "Context.h"
 #include "DescriptorSet.h"
 #include "DescriptorSetLayout.h"
 #include "LogicalDevice.h"
 
-void dae::DescriptorPool::Create(LogicalDevice* pLogicalDevice,
+void dae::DescriptorPool::Create(const Context& context,
     const std::vector<VkDescriptorPoolSize>& poolSizes,uint32_t maxSets)
 {
-    m_pLogicalDevice = pLogicalDevice;
     m_maxSets = maxSets;
 
     VkDescriptorPoolCreateInfo poolInfo{};
@@ -18,20 +18,20 @@ void dae::DescriptorPool::Create(LogicalDevice* pLogicalDevice,
     poolInfo.maxSets = m_maxSets;
 
     LOG_VULKAN_ERROR(
-        vkCreateDescriptorPool(m_pLogicalDevice->device, &poolInfo, nullptr, &m_pool),
+        vkCreateDescriptorPool(context.logicalDevice.device, &poolInfo, nullptr, &m_pool),
         "failed to create descriptor pool!"
     );
 }
 
-void dae::DescriptorPool::Destroy() const
+void dae::DescriptorPool::Destroy(const Context& context) const
 {
     if (m_pool != VK_NULL_HANDLE)
     {
-		vkDestroyDescriptorPool(m_pLogicalDevice->device, m_pool, nullptr);
+        vkDestroyDescriptorPool(context.logicalDevice.device, m_pool, nullptr);
     }
 }
 
-std::vector<dae::DescriptorSet> dae::DescriptorPool::Allocate(DescriptorSetLayout& layout, uint32_t count) const
+std::vector<dae::DescriptorSet> dae::DescriptorPool::Allocate(const Context& context, DescriptorSetLayout& layout, uint32_t count) const
 {
     std::vector<VkDescriptorSetLayout> layouts(count, layout.layout);
     VkDescriptorSetAllocateInfo allocInfo{};
@@ -42,7 +42,7 @@ std::vector<dae::DescriptorSet> dae::DescriptorPool::Allocate(DescriptorSetLayou
 
     std::vector<VkDescriptorSet> rawSets(count);
     LOG_VULKAN_ERROR(
-        vkAllocateDescriptorSets(m_pLogicalDevice->device, &allocInfo, rawSets.data()),
+        vkAllocateDescriptorSets(context.logicalDevice.device, &allocInfo, rawSets.data()),
         "failed to allocate descriptor sets!"
     );
 

@@ -6,11 +6,11 @@
 
 namespace dae
 {
-	struct LogicalDevice;
+	struct Context;
 
 	struct Image
 	{
-		void Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
+		void Destroy(const Context& context);
 
 		VkImage image = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;

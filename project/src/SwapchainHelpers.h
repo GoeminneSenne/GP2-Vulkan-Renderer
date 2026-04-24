@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include "Context.h"
 #include "FramebufferBuilder.h"
 #include "ImageHelpers.h"
 #include "LogicalDevice.h"
@@ -11,7 +12,7 @@ namespace dae
 {
 	namespace SwapchainHelpers
 	{
-		inline Image WrapSwapchainImage(const LogicalDevice& logicalDevice,
+		inline Image WrapSwapchainImage(const Context& context,
 			VkImage swapchainImage, VkFormat format, VkExtent2D extent)
 		{
 			Image image;
@@ -21,12 +22,12 @@ namespace dae
 			image.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			image.mipLevels = 1;
 
-			ImageHelpers::CreateImageView(logicalDevice, image);
+			ImageHelpers::CreateImageView(context, image);
 
 			return image;
 		}
 
-		inline void CreateFramebuffers(const LogicalDevice& logicalDevice, const RenderPass& renderPass, const Image& depthImage, Swapchain& swapchain)
+		inline void CreateFramebuffers(const Context& context, const RenderPass& renderPass, const Image& depthImage, Swapchain& swapchain)
 		{
 			swapchain.framebuffers.resize(swapchain.images.size());
 
@@ -36,11 +37,11 @@ namespace dae
 
 				FramebufferBuilder framebufferBuilder = {};
 				framebufferBuilder
-					.SetRenderPass(renderPass.renderPass)
+					.SetRenderPass(renderPass)
 					.SetAttachments(attachments)
 					.SetWidth(swapchain.extent.width)
 					.SetHeight(swapchain.extent.height)
-					.Build(logicalDevice, swapchain.framebuffers[idx]);
+					.Build(context, swapchain.framebuffers[idx]);
 			}
 		}
 	}

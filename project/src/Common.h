@@ -1,5 +1,8 @@
 #pragma once
 
+#include <deque>
+#include <functional>
+#include <ranges>
 #include <stdexcept>
 
 #define LOG_VULKAN_ERROR(expr, msg)                              \
@@ -9,3 +12,25 @@
             throw std::runtime_error(msg);                       \
         }                                                        \
     }()
+
+class DeletionQueue final
+{
+public:
+    void PushDeletor(std::function<void()>&& deletorFunc)
+    {
+        m_deletors.push_back(deletorFunc);
+    }
+
+    void Flush()
+    {
+	    for (auto& m_deletor : std::ranges::reverse_view(m_deletors))
+	    {
+		    m_deletor();
+	    }
+
+        m_deletors.clear();
+    }
+
+private:
+       std::deque< std::function<void()>> m_deletors;
+};

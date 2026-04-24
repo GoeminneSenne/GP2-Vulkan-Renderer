@@ -15,9 +15,8 @@ namespace dae
 
 	struct Swapchain
 	{
-		void Create(const Window& window, const Instance& instance, 
-			const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice);
-		void Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator);
+		void Create(const Window& window, const Context& context);
+		void Destroy(const Context& context);
 
 		VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 		std::vector<Image> images;

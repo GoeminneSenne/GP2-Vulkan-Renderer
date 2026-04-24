@@ -78,6 +78,7 @@
 #include "GraphicsPipelineBuilder.h"
 #include "GraphicsPipelineLayout.h"
 #include "GraphicsPipelineLayoutBuilder.h"
+#include "Context.h"
 
 
 using namespace dae;
@@ -108,26 +109,6 @@ struct UniformBufferObject
     alignas(16) glm::mat4 proj;
 };
 
-/*
-// Triangle demo
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-*/
-
 class HelloTriangleApplication {
 public:
     HelloTriangleApplication()
@@ -143,9 +124,7 @@ public:
 
 private:
     Window m_window;
-    Instance m_instance{};
-    PhysicalDevice m_physicalDevice{};
-    LogicalDevice m_logicalDevice{};
+    Context m_context{};
 
     Swapchain m_swapchain{};
 
@@ -158,10 +137,6 @@ private:
     GraphicsPipelineLayout m_graphicsPipelineLayout{};
     GraphicsPipeline m_graphicsPipeline{};
 
-	//VkPipelineLayout pipelineLayout{};
-    //VkPipeline graphicsPipeline{};
-
-    CommandPool m_commandPool{};
     std::vector<CommandBuffer> m_renderCommandBuffers;
 
     std::vector<Semaphore> m_imageAvailableSemaphores;
@@ -169,7 +144,6 @@ private:
     std::vector<Fence> m_inFlightFences;
     uint32_t currentFrame = 0;
 
-    VmaAllocator allocator{};
 
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
@@ -185,19 +159,17 @@ private:
 
     Image m_depthImage{};
 
+    DeletionQueue m_applicationDeletionQueue{};
+
     void initVulkan() 
 	{
-        CreateInstance();
-        PickPhysicalDevice();
-        CreateLogicalDevice();
-        m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
-        createRenderPass();
+        CreateContext();
+        m_swapchain.Create(m_window, m_context);
+    	createRenderPass();
         createDescriptorSetLayout();
     	createGraphicsPipeline();
-        m_commandPool.CreateCommandPool(m_physicalDevice, &m_logicalDevice);
-    	createVmaAllocator();
         createDepthResources();
-        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, m_renderPass, m_depthImage, m_swapchain);
+        SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
         createTextureImage();
         CreateTextureSampler();
         loadModel();
@@ -206,7 +178,7 @@ private:
         createUniformBuffers();
         CreateDescriptorPool();
         createDescriptorSets();
-        m_renderCommandBuffers = m_commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
+        m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
     	createSyncObjects();
     }
 
@@ -218,94 +190,71 @@ private:
         	drawFrame();
         }
 
-        vkDeviceWaitIdle(m_logicalDevice.device);
+        vkDeviceWaitIdle(m_context.logicalDevice.device);
     }
 
     void cleanup() 
 	{
         cleanupSwapChain();
 
-        m_sampler.Destroy(m_logicalDevice);
-        m_textureImage.Destroy(m_logicalDevice, allocator);
+        m_sampler.Destroy(m_context);
+        m_textureImage.Destroy(m_context);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            vmaUnmapMemory(allocator, m_uniformBuffers[i].allocation);
-            m_uniformBuffers[i].Destroy(allocator);
+            vmaUnmapMemory(m_context.allocator, m_uniformBuffers[i].allocation);
+            m_uniformBuffers[i].Destroy(m_context);
         }
 
-        m_descriptorPool.Destroy();
-    	m_descriptorSetLayout.Destroy(m_logicalDevice);
+        m_descriptorPool.Destroy(m_context);
+    	m_descriptorSetLayout.Destroy(m_context);
 
-        m_indexBuffer.Destroy(allocator);
-        m_vertexBuffer.Destroy(allocator);
+        m_indexBuffer.Destroy(m_context);
+        m_vertexBuffer.Destroy(m_context);
 
-        vmaDestroyAllocator(allocator);
 
-        m_graphicsPipeline.Destroy(m_logicalDevice);
-        m_graphicsPipelineLayout.Destroy(m_logicalDevice);
+        m_graphicsPipeline.Destroy(m_context);
+        m_graphicsPipelineLayout.Destroy(m_context);
 
-        m_renderPass.Destroy(m_logicalDevice);
+        m_renderPass.Destroy(m_context);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            m_imageAvailableSemaphores[i].Destroy(m_logicalDevice);
-            m_inFlightFences[i].Destroy(m_logicalDevice);
+            m_imageAvailableSemaphores[i].Destroy(m_context);
+            m_inFlightFences[i].Destroy(m_context);
         }
 
         for (const auto& semaphore : m_renderFinishedSemaphores)
         {
-            semaphore.Destroy(m_logicalDevice);
+            semaphore.Destroy(m_context);
         }
 
-        m_commandPool.Destroy();
+        vmaDestroyAllocator(m_context.allocator);
+        m_context.commandPool.Destroy();
+        m_context.logicalDevice.Destroy();
+        m_context.instance.Destroy();
 
-        m_logicalDevice.Destroy();
-
-        m_instance.Destroy();
         m_window.Destroy();
 
     }
 
-    void CreateInstance()
+    void CreateContext()
     {
-        InstanceBuilder instanceBuilder = {};
-        instanceBuilder
-            .SetApplicationName("Hello Triangle")
-            .SetApiVersion(VK_MAKE_VERSION(1, 0, 0))
-            .SetEngineName("No Engine")
-            .SetEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-            .SetApiVersion(VK_API_VERSION_1_0)
-            .UseValidation(enableValidationLayers)
-			.AddValidationLayers(validationLayers)
-            .Build(m_instance);
+        ContextConfig config{
+            enableValidationLayers,
+            validationLayers,
+            {},
+            deviceExtensions
+        };
 
-        m_instance.CreateSurface(m_window);
-    }
-
-    void PickPhysicalDevice()
-    {
-        PhysicalDeviceSelector physicalDeviceSelector = {};
-        physicalDeviceSelector
-            .AddDeviceExtensions(deviceExtensions)
-            .PickPhysicalDevice(m_instance, m_physicalDevice);
-    }
-
-    void CreateLogicalDevice()
-    {
-        LogicalDeviceBuilder logicalDeviceBuilder = {};
-        logicalDeviceBuilder
-            .EnablebleAnisotropy(true)
-            .AddDeviceExtensions(deviceExtensions)
-            .UseValidation(true)
-            .AddValidationLayers(validationLayers)
-            .Build(m_physicalDevice, m_logicalDevice);
+        ContextFactory contextFactory{ config };
+        contextFactory.Create(&m_window, m_context);
     }
 
     void cleanupSwapChain()
     {
-        m_depthImage.Destroy(m_logicalDevice, allocator);
-        m_swapchain.Destroy(m_logicalDevice, allocator);
+        m_depthImage.Destroy(m_context);
+        m_swapchain.Destroy(m_context);
     }
 
     void recreateSwapChain()
@@ -317,21 +266,21 @@ private:
             glfwWaitEvents();
         }
 
-        vkDeviceWaitIdle(m_logicalDevice.device);
+        vkDeviceWaitIdle(m_context.logicalDevice.device);
 
         cleanupSwapChain();
 
-        m_swapchain.Create(m_window, m_instance, m_physicalDevice, m_logicalDevice);
+        m_swapchain.Create(m_window, m_context);
         createDepthResources();
-        SwapchainHelpers::CreateFramebuffers(m_logicalDevice, m_renderPass, m_depthImage, m_swapchain);
+        SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
 
 
         //Semaphore reconstruction
         //TODO: should be in seperate function or handled elsewhere??
         for (auto& semaphore : m_renderFinishedSemaphores)
         {
-            semaphore.Destroy(m_logicalDevice);
-            semaphore.Create(m_logicalDevice);
+            semaphore.Destroy(m_context);
+            semaphore.Create(m_context);
         }
     }
 
@@ -341,7 +290,7 @@ private:
         renderPassBuilder
 			.AddColorAttachment(m_swapchain.imageFormat)
             .SetDepthAttachment(findDepthFormat())
-            .Build(m_logicalDevice, m_renderPass);
+            .Build(m_context, m_renderPass);
     }
 
     void createDescriptorSetLayout()
@@ -350,7 +299,7 @@ private:
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
             .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_logicalDevice, m_descriptorSetLayout);
+            .Build(m_context, m_descriptorSetLayout);
     }
 
     void createGraphicsPipeline()
@@ -360,16 +309,16 @@ private:
     	ShaderLoader shaderLoader = {};
         shaderLoader
             .SetFilename("resources/shaders/base_shader.vert.spv")
-            .Load(m_logicalDevice, vertexShader);
+            .Load(m_context, vertexShader);
 
         shaderLoader
             .SetFilename("resources/shaders/base_shader.frag.spv")
-            .Load(m_logicalDevice, fragmentShader);
+            .Load(m_context, fragmentShader);
 
         GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
             .AddDescriptorSetLayout(m_descriptorSetLayout)
-            .Build(m_logicalDevice, m_graphicsPipelineLayout);
+            .Build(m_context, m_graphicsPipelineLayout);
 
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
@@ -383,24 +332,10 @@ private:
             .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
             .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
             .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-			.Build(m_logicalDevice, m_graphicsPipeline);
+			.Build(m_context, m_graphicsPipeline);
 
-        fragmentShader.Destroy(m_logicalDevice);
-        vertexShader.Destroy(m_logicalDevice);
-    }
-
-    void createVmaAllocator()
-    {
-        VmaAllocatorCreateInfo createInfo{};
-        createInfo.physicalDevice = m_physicalDevice.physicalDevice;
-        createInfo.device = m_logicalDevice.device;
-        createInfo.instance = m_instance.instance;
-        createInfo.flags = 0;
-        
-        LOG_VULKAN_ERROR(
-            vmaCreateAllocator(&createInfo, &allocator),
-			"failed to create VMA allocator!"
-        );
+        fragmentShader.Destroy(m_context);
+        vertexShader.Destroy(m_context);
     }
 
     void createDepthResources()
@@ -424,14 +359,14 @@ private:
             .SetAspectMask(aspectMask)
     	    .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
             .SetAllocFlags(0)
-            .Build(allocator, m_logicalDevice, m_depthImage);
+            .Build(m_context, m_depthImage);
 
-        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
         ImageHelpers::transitionImageLayout(commandBuffer, m_depthImage, 
            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
            0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
@@ -439,7 +374,7 @@ private:
 	    for (VkFormat format : candidates)
 	    {
             VkFormatProperties properties;
-            vkGetPhysicalDeviceFormatProperties(m_physicalDevice.physicalDevice, format, &properties);
+            vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice.physicalDevice, format, &properties);
 
             if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
             {
@@ -480,14 +415,14 @@ private:
 
         Buffer stagingBuffer;
 
-        BufferHelpers::CreateBuffer(allocator, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        BufferHelpers::CreateBuffer(m_context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             stagingBuffer);
 
         void* data;
-        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+        vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
         memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vmaUnmapMemory(allocator, stagingBuffer.allocation);
+        vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
         stbi_image_free(pixels);
 
@@ -504,24 +439,24 @@ private:
             .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
             .SetAllocUsage(VMA_MEMORY_USAGE_AUTO)
             .SetAllocFlags(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT)
-            .Build(allocator, m_logicalDevice, m_textureImage);
+            .Build(m_context, m_textureImage);
 
-        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
         ImageHelpers::transitionImageLayout(commandBuffer, m_textureImage, 
             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
-        commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
         BufferHelpers::CopyBufferToImage(commandBuffer, stagingBuffer, m_textureImage);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
-        stagingBuffer.Destroy(allocator);
+        stagingBuffer.Destroy(m_context);
 
-        commandBuffer = m_commandPool.BeginSingleTimeCommand();
-        ImageHelpers::GenerateMipmaps(commandBuffer, m_physicalDevice, m_textureImage);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
+        ImageHelpers::GenerateMipmaps(commandBuffer, m_context, m_textureImage);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
     }
 
     void CreateTextureSampler()
@@ -536,7 +471,7 @@ private:
             .SetMipLodBias(0.f)
             .SetMinLod(0.f)
             .SetMaxLod(VK_LOD_CLAMP_NONE)
-            .Build(m_physicalDevice, m_logicalDevice, m_sampler);
+            .Build(m_context, m_sampler);
     }
 
     void loadModel()
@@ -590,24 +525,24 @@ private:
 
         Buffer stagingBuffer;
 
-        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             stagingBuffer);
 
         void* data;
-        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+        vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
         memcpy(data, vertices.data(), (size_t)bufferSize);
-        vmaUnmapMemory(allocator, stagingBuffer.allocation);
+        vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0, m_vertexBuffer);
 
 
-        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
         BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_vertexBuffer, bufferSize);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
-        stagingBuffer.Destroy(allocator);
+        stagingBuffer.Destroy(m_context);
     }
 
     void createIndexBuffer()
@@ -616,24 +551,24 @@ private:
 
         Buffer stagingBuffer;
 
-        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             stagingBuffer);
 
         void* data;
-        vmaMapMemory(allocator, stagingBuffer.allocation, &data);
+        vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
         memcpy(data, indices.data(), (size_t)bufferSize);
-        vmaUnmapMemory(allocator, stagingBuffer.allocation);
+        vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO, 0,
             m_indexBuffer);
 
-        CommandBuffer commandBuffer = m_commandPool.BeginSingleTimeCommand();
+        CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
         BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_indexBuffer, bufferSize);
-        m_commandPool.EndSingleTimeCommand(commandBuffer);
+        m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
-        stagingBuffer.Destroy(allocator);
+        stagingBuffer.Destroy(m_context);
     }
 
     void createUniformBuffers()
@@ -644,11 +579,11 @@ private:
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
 	        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-	        BufferHelpers::CreateBuffer(allocator, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
+	        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
 	                                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
 	                                    m_uniformBuffers[i]);
 
-            vmaMapMemory(allocator, m_uniformBuffers[i].allocation , &uniformBuffersMapped[i]);
+            vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation , &uniformBuffersMapped[i]);
         }
     }
 
@@ -658,12 +593,12 @@ private:
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
 
-        m_descriptorPool.Create(&m_logicalDevice, poolSizes, MAX_FRAMES_IN_FLIGHT);
+        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
     }
     
     void createDescriptorSets()
     {
-        m_descriptorSets = m_descriptorPool.Allocate(m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
+        m_descriptorSets = m_descriptorPool.Allocate(m_context, m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -672,7 +607,7 @@ private:
         	    .SetTarget(&m_descriptorSets[i])
                 .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
                 .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
-                .UpdateTarget(m_logicalDevice);
+                .UpdateTarget(m_context);
         }
     }
 
@@ -760,23 +695,23 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
         {
-            m_imageAvailableSemaphores[i].Create(m_logicalDevice);
-            m_inFlightFences[i].Create(m_logicalDevice);
+            m_imageAvailableSemaphores[i].Create(m_context);
+            m_inFlightFences[i].Create(m_context);
         }
 
         for (size_t i = 0; i < m_swapchain.images.size(); ++i)
         {
-            m_renderFinishedSemaphores[i].Create(m_logicalDevice);
+            m_renderFinishedSemaphores[i].Create(m_context);
         }
 
     }
 
     void drawFrame()
     {
-        m_inFlightFences[currentFrame].Wait(m_logicalDevice);
+        m_inFlightFences[currentFrame].Wait(m_context);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrame].Get(), VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_context.logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrame].Get(), VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -788,7 +723,7 @@ private:
 
         UpdateUniformBuffer(currentFrame);
 
-        m_inFlightFences[currentFrame].Reset(m_logicalDevice);
+        m_inFlightFences[currentFrame].Reset(m_context);
 
         ///Record
         vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
@@ -811,7 +746,7 @@ private:
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        m_logicalDevice.graphicsQueue.Submit(submitInfo, m_inFlightFences[currentFrame]);
+        m_context.logicalDevice.graphicsQueue.Submit(submitInfo, m_inFlightFences[currentFrame]);
 
         ///Present
         VkPresentInfoKHR presentInfo{};
@@ -825,7 +760,7 @@ private:
         presentInfo.pSwapchains = swapChains;
         presentInfo.pImageIndices = &imageIndex;
 
-        result = m_logicalDevice.presentQueue.Present(presentInfo);
+        result = m_context.logicalDevice.presentQueue.Present(presentInfo);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.wasResized)
         {

@@ -5,6 +5,7 @@
 
 namespace dae
 {
+	struct Context;
 	struct LogicalDevice;
 	struct DescriptorSet;
 	struct Buffer;
@@ -18,7 +19,7 @@ namespace dae
 		DescriptorSetWriter& WriteBuffer(uint32_t binding, const Buffer& buffer, VkDeviceSize offset, VkDeviceSize range);
 		DescriptorSetWriter& WriteImage(uint32_t binding, VkImageLayout layout, const Image& image, const Sampler& sampler);
 		
-		void UpdateTarget(const LogicalDevice& logicalDevice) const;
+		void UpdateTarget(const Context& context) const;
 
 	private:
 		DescriptorSet* m_target = nullptr;

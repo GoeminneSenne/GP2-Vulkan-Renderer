@@ -56,7 +56,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 	return *this;
 }
 
-void dae::DescriptorSetWriter::UpdateTarget(const LogicalDevice& logicalDevice) const
+void dae::DescriptorSetWriter::UpdateTarget(const Context& context) const
 {
-	vkUpdateDescriptorSets(logicalDevice.device, static_cast<uint32_t>(m_writes.size()), m_writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(context.logicalDevice.device, static_cast<uint32_t>(m_writes.size()), m_writes.data(), 0, nullptr);
 }

@@ -12,11 +12,3 @@ void dae::Instance::Destroy()
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyInstance(instance, nullptr);
 }
-
-void dae::Instance::CreateSurface(const Window& window)
-{
-	LOG_VULKAN_ERROR(
-		glfwCreateWindowSurface(instance, window.window, nullptr, &surface),
-		"failed to create window surface!"
-	);
-}

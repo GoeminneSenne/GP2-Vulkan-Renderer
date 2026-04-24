@@ -3,13 +3,14 @@
 #include <vulkan/vulkan_core.h>
  
 #include "CommandBuffer.h"
+#include "Context.h"
 
 namespace dae
 {
 	namespace BufferHelpers
 	{
 		//TODO misschien toch BufferBuilder maken
-		inline void CreateBuffer(const VmaAllocator& allocator, VkDeviceSize size, VkBufferUsageFlags usage, 
+		inline void CreateBuffer(const Context& context, VkDeviceSize size, VkBufferUsageFlags usage, 
 			VmaMemoryUsage allocUsage, VmaAllocationCreateFlags allocFlags,
 			Buffer& buffer)
 		{
@@ -24,7 +25,7 @@ namespace dae
 			allocInfo.flags = allocFlags;
 
 			LOG_VULKAN_ERROR(
-				vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.allocation, nullptr),
+				vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &buffer.buffer, &buffer.allocation, nullptr),
 				"failed to allocate buffer!"
 			);
 

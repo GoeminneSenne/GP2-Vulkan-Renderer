@@ -4,14 +4,13 @@
 
 namespace dae
 {
-	struct PhysicalDevice;
 	struct Sampler;
-	struct LogicalDevice;
+	struct Context;
 
 	class SamplerBuilder final
 	{
 	public:
-		void Build(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, Sampler& sampler) const;
+		void Build(const Context& context, Sampler& sampler) const;
 
 		SamplerBuilder& SetFilter(VkFilter filter);
 		SamplerBuilder& SetAddressMode(VkSamplerAddressMode addressMode);

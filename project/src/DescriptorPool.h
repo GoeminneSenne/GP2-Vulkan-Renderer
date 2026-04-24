@@ -5,6 +5,7 @@
 
 namespace dae
 {
+	struct Context;
 	struct DescriptorSet;
 	struct DescriptorSetLayout;
 	class LogicalDevice;
@@ -12,13 +13,12 @@ namespace dae
 	class DescriptorPool final
 	{
 	public:
-		void Create(LogicalDevice* pLogicalDevice, 
+		void Create(const Context& context, 
 			const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
-		void Destroy() const;
+		void Destroy(const Context& context) const;
 
-		std::vector<DescriptorSet> Allocate(DescriptorSetLayout& layout, uint32_t count) const;
+		std::vector<DescriptorSet> Allocate(const Context& context, DescriptorSetLayout& layout, uint32_t count) const;
 	private:
-		LogicalDevice* m_pLogicalDevice = nullptr;
 		VkDescriptorPool m_pool = VK_NULL_HANDLE;
 		uint32_t m_maxSets{};
 	};

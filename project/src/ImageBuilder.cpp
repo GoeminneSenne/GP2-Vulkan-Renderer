@@ -4,7 +4,7 @@
 #include "Image.h"
 #include "ImageHelpers.h"
 
-void dae::ImageBuilder::Build(const VmaAllocator& allocator, const LogicalDevice& logicalDevice, Image& image) const
+void dae::ImageBuilder::Build(const Context& context, Image& image) const
 {
 
 	//Set extra info from Image struct
@@ -35,12 +35,12 @@ void dae::ImageBuilder::Build(const VmaAllocator& allocator, const LogicalDevice
 	allocInfo.flags = m_allocFlags;
 
 	LOG_VULKAN_ERROR(
-		vmaCreateImage(allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, nullptr),
+		vmaCreateImage(context.allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, nullptr),
 		"failed to create image!"
 	);
 
 	//Create ImageView
-	ImageHelpers::CreateImageView(logicalDevice, image);
+	ImageHelpers::CreateImageView(context, image);
 }
 
 dae::ImageBuilder& dae::ImageBuilder::SetWidth(uint32_t width)

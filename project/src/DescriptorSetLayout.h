@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+
+#include "Context.h"
 #include "LogicalDevice.h"
 
 namespace dae
@@ -18,9 +20,9 @@ namespace dae
 		VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 		std::vector<Binding> bindings;
 
-		void Destroy(const LogicalDevice& logicalDevice) const
+		void Destroy(const Context& context) const
 		{
-			vkDestroyDescriptorSetLayout(logicalDevice.device, layout, nullptr);
+			vkDestroyDescriptorSetLayout(context.logicalDevice.device, layout, nullptr);
 		}
 	};
 }

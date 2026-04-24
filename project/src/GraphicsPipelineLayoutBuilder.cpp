@@ -5,7 +5,7 @@
 #include "DescriptorSetLayout.h"
 #include "GraphicsPipelineLayout.h"
 
-void dae::GraphicsPipelineLayoutBuilder::Build(const LogicalDevice& logicalDevice,
+void dae::GraphicsPipelineLayoutBuilder::Build(const Context& context,
                                                GraphicsPipelineLayout& pipelineLayout)
 {
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -16,7 +16,7 @@ void dae::GraphicsPipelineLayoutBuilder::Build(const LogicalDevice& logicalDevic
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
     LOG_VULKAN_ERROR(
-        vkCreatePipelineLayout(logicalDevice.device, &pipelineLayoutInfo, nullptr, &pipelineLayout.layout),
+        vkCreatePipelineLayout(context.logicalDevice.device, &pipelineLayoutInfo, nullptr, &pipelineLayout.layout),
 		"failed to create pipeline layout!"
     );
 }

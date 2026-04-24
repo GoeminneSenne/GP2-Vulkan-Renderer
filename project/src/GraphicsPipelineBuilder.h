@@ -5,6 +5,7 @@
 
 namespace dae
 {
+	struct Context;
 	struct Shader;
 	struct GraphicsPipeline;
 	struct RenderPass;
@@ -15,7 +16,7 @@ namespace dae
 	{
 	public:
 
-		void Build(const LogicalDevice& logicalDevice, GraphicsPipeline& pipeline);
+		void Build(const Context& context, GraphicsPipeline& pipeline);
 
 		GraphicsPipelineBuilder& SetPipelineLayout(const GraphicsPipelineLayout& layout);
 		GraphicsPipelineBuilder& SetRenderPass(const RenderPass& renderPass);

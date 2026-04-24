@@ -9,9 +9,9 @@ namespace dae
 	{
 		VkSampler sampler = VK_NULL_HANDLE;
 
-		void Destroy(const LogicalDevice& logicalDevice)
+		void Destroy(const Context& context)
 		{
-			vkDestroySampler(logicalDevice.device, sampler, nullptr);
+			vkDestroySampler(context.logicalDevice.device, sampler, nullptr);
 		}
 	};
 }

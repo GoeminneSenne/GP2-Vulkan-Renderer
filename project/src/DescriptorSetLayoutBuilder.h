@@ -10,7 +10,7 @@ namespace dae
 	class DescriptorSetLayoutBuilder final
 	{
 	public:
-		void Build(const LogicalDevice& logicalDevice, DescriptorSetLayout& descriptorSetLayout);
+		void Build(const Context& context, DescriptorSetLayout& descriptorSetLayout);
 
 		DescriptorSetLayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stages, uint32_t count = 1);
 	private:

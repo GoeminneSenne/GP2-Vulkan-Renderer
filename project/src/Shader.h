@@ -5,17 +5,16 @@
 
 namespace dae
 {
-	//TODO: desciption dat default entrypoint main is als je geen meegeeft
 	struct Shader final
 	{
 		VkShaderModule module = VK_NULL_HANDLE;
 		std::string entryPoint{};
 
-		void Destroy(const LogicalDevice& logicalDevice)
+		void Destroy(const Context& context)
 		{
 			if (module != VK_NULL_HANDLE)
 			{
-				vkDestroyShaderModule(logicalDevice.device, module, nullptr);
+				vkDestroyShaderModule(context.logicalDevice.device, module, nullptr);
 			}
 		}
 	};

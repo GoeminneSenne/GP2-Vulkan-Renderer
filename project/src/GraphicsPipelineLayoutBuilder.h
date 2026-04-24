@@ -5,6 +5,7 @@
 
 namespace dae
 {
+	struct Context;
 	struct GraphicsPipelineLayout;
 	struct DescriptorSetLayout;
 	struct LogicalDevice;
@@ -12,7 +13,7 @@ namespace dae
 	class GraphicsPipelineLayoutBuilder final
 	{
 	public:
-		void Build(const LogicalDevice& logicalDevice, GraphicsPipelineLayout& pipelineLayout);
+		void Build(const Context& context, GraphicsPipelineLayout& pipelineLayout);
 
 		GraphicsPipelineLayoutBuilder& AddDescriptorSetLayout(DescriptorSetLayout setLayout);
 		//GraphicsPipelineLayoutBuilder& AddPushConstant(VkPushConstantRange pushConstant);

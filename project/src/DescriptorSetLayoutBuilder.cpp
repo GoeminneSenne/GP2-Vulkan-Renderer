@@ -3,7 +3,7 @@
 #include "Common.h"
 #include "LogicalDevice.h"
 
-void dae::DescriptorSetLayoutBuilder::Build(const LogicalDevice& logicalDevice, DescriptorSetLayout& descriptorSetLayout)
+void dae::DescriptorSetLayoutBuilder::Build(const Context& context, DescriptorSetLayout& descriptorSetLayout)
 {
 	std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 
@@ -25,7 +25,7 @@ void dae::DescriptorSetLayoutBuilder::Build(const LogicalDevice& logicalDevice, 
 	layoutInfo.pBindings = layoutBindings.data();
 
 	LOG_VULKAN_ERROR(
-		vkCreateDescriptorSetLayout(logicalDevice.device, &layoutInfo, nullptr, &descriptorSetLayout.layout),
+		vkCreateDescriptorSetLayout(context.logicalDevice.device, &layoutInfo, nullptr, &descriptorSetLayout.layout),
 		"failed to create descriptor set layout!"
 	);
 

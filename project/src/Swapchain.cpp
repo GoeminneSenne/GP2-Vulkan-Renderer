@@ -8,10 +8,9 @@
 #include "ImageHelpers.h"
 #include "SwapchainHelpers.h"
 
-void dae::Swapchain::Create(const Window& window, const Instance& instance, 
-                            const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice)
+void dae::Swapchain::Create(const Window& window, const Context& context)
 {
-	const SwapchainSupportDetails& swapchainSupport = physicalDevice.swapchainSupport;
+	const SwapchainSupportDetails& swapchainSupport = context.physicalDevice.swapchainSupport;
 
 	VkSurfaceFormatKHR surfaceFormat = swapchainSupport.ChooseSurfaceFormat();
 	VkPresentModeKHR presentMode = swapchainSupport.ChoosePresentMode();
@@ -26,7 +25,7 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 
 	VkSwapchainCreateInfoKHR createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface = instance.surface;
+	createInfo.surface = context.instance.surface;
 	createInfo.minImageCount = imageCount;
 	createInfo.imageFormat = surfaceFormat.format;
 	createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -34,7 +33,7 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	const QueueFamilyIndices& indices = physicalDevice.queueFamilyIndices;
+	const QueueFamilyIndices& indices = context.physicalDevice.queueFamilyIndices;
 	uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
 	if (indices.graphicsFamily != indices.presentFamily)
@@ -58,40 +57,40 @@ void dae::Swapchain::Create(const Window& window, const Instance& instance,
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	LOG_VULKAN_ERROR(
-		vkCreateSwapchainKHR(logicalDevice.device, &createInfo, nullptr, &swapchain),
+		vkCreateSwapchainKHR(context.logicalDevice.device, &createInfo, nullptr, &swapchain),
 		"failed to create swapchain!"
 	);
 
-	vkGetSwapchainImagesKHR(logicalDevice.device, swapchain, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(context.logicalDevice.device, swapchain, &imageCount, nullptr);
 	std::vector<VkImage> rawImages(imageCount);
-	vkGetSwapchainImagesKHR(logicalDevice.device, swapchain, &imageCount, rawImages.data());
+	vkGetSwapchainImagesKHR(context.logicalDevice.device, swapchain, &imageCount, rawImages.data());
 
 
 	images.resize(imageCount);
 	for (size_t idx{}; idx < imageCount; ++idx)
 	{
-		images[idx] = SwapchainHelpers::WrapSwapchainImage(logicalDevice, rawImages[idx], surfaceFormat.format, extent);
+		images[idx] = SwapchainHelpers::WrapSwapchainImage(context, rawImages[idx], surfaceFormat.format, extent);
 	}
 
 	this->imageFormat = surfaceFormat.format;
 	this->extent = extent;
 }
 
-void dae::Swapchain::Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
+void dae::Swapchain::Destroy(const Context& context)
 {
 	for (auto& framebuffer : framebuffers)
 	{
-		framebuffer.Destroy(logicalDevice);
+		framebuffer.Destroy(context);
 	}
 
 	for (auto& image : images)
 	{
-		image.Destroy(logicalDevice, allocator);
+		image.Destroy(context);
 	}
 
 	if (swapchain != VK_NULL_HANDLE)
 	{
-		vkDestroySwapchainKHR(logicalDevice.device, swapchain, nullptr);
+		vkDestroySwapchainKHR(context.logicalDevice.device, swapchain, nullptr);
 	}
 
 }

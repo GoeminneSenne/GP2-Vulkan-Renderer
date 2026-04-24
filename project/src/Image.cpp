@@ -1,16 +1,17 @@
 #include "Image.h"
 #include "LogicalDevice.h"
+#include "Context.h"
 
-void dae::Image::Destroy(const LogicalDevice& logicalDevice, const VmaAllocator& allocator)
+void dae::Image::Destroy(const Context& context)
 {
 	if (image != VK_NULL_HANDLE && allocation != nullptr)
 	{
-		vmaDestroyImage(allocator, image, allocation);
+		vmaDestroyImage(context.allocator, image, allocation);
 	}
 
 	if (view != VK_NULL_HANDLE)
 	{
-		vkDestroyImageView(logicalDevice.device, view, nullptr);
+		vkDestroyImageView(context.logicalDevice.device, view, nullptr);
 	}
 
 }

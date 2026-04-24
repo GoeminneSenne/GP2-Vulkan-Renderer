@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "Context.h"
 #include "LogicalDevice.h"
 
 namespace dae
@@ -12,9 +14,9 @@ namespace dae
 		VkExtent2D extent;
 		std::vector<VkImageView> attachments;
 
-		void Destroy(const LogicalDevice& logicalDevice) const
+		void Destroy(const Context& context) const
 		{
-			vkDestroyFramebuffer(logicalDevice.device, framebuffer, nullptr);
+			vkDestroyFramebuffer(context.logicalDevice.device, framebuffer, nullptr);
 		}
 	};
 }

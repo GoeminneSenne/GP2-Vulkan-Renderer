@@ -1,11 +1,10 @@
 #include "SamplerBuilder.h"
 
 #include "Common.h"
-#include "LogicalDevice.h"
-#include "PhysicalDevice.h"
+#include "Context.h"
 #include "Sampler.h"
 
-void dae::SamplerBuilder::Build(const PhysicalDevice& physicalDevice, const LogicalDevice& logicalDevice, Sampler& sampler) const
+void dae::SamplerBuilder::Build(const Context& context, Sampler& sampler) const
 {
 	VkSamplerCreateInfo samplerInfo{};
 	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -16,10 +15,10 @@ void dae::SamplerBuilder::Build(const PhysicalDevice& physicalDevice, const Logi
 	samplerInfo.addressModeV = m_addressMode;
 	samplerInfo.addressModeW = m_addressMode;
 
-	if (physicalDevice.features.samplerAnisotropy)
+	if (context.physicalDevice.features.samplerAnisotropy)
 	{
 		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.maxAnisotropy = physicalDevice.properties.limits.maxSamplerAnisotropy;
+		samplerInfo.maxAnisotropy = context.physicalDevice.properties.limits.maxSamplerAnisotropy;
 	}
 	else
 	{
@@ -38,7 +37,7 @@ void dae::SamplerBuilder::Build(const PhysicalDevice& physicalDevice, const Logi
 	samplerInfo.maxLod = m_maxLod;
 
 	LOG_VULKAN_ERROR(
-		vkCreateSampler(logicalDevice.device, &samplerInfo, nullptr, &sampler.sampler),
+		vkCreateSampler(context.logicalDevice.device, &samplerInfo, nullptr, &sampler.sampler),
 		"failed to create sampler!"
 	);
 }

@@ -1,12 +1,13 @@
 #include "GraphicsPipelineBuilder.h"
 
 #include "Common.h"
+#include "Context.h"
 #include "GraphicsPipeline.h"
 #include "GraphicsPipelineLayout.h"
 #include "RenderPass.h"
 #include "Shader.h"
 
-void dae::GraphicsPipelineBuilder::Build(const LogicalDevice& logicalDevice, GraphicsPipeline& pipeline)
+void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipeline& pipeline)
 {
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 	vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -92,7 +93,7 @@ void dae::GraphicsPipelineBuilder::Build(const LogicalDevice& logicalDevice, Gra
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
 	LOG_VULKAN_ERROR(
-		vkCreateGraphicsPipelines(logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline),
+		vkCreateGraphicsPipelines(context.logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline),
 		"failed to create graphics pipeline!"
 	);
 }

@@ -6,6 +6,7 @@
 
 #include "CommandBuffer.h"
 #include "Common.h"
+#include "Context.h"
 #include "Image.h"
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
@@ -14,7 +15,7 @@ namespace dae
 {
 	namespace ImageHelpers
 	{
-		inline void CreateImageView(const LogicalDevice& logicalDevice, Image& image)
+		inline void CreateImageView(const Context& context, Image& image)
 		{
 			VkImageViewCreateInfo viewInfo{};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -28,15 +29,15 @@ namespace dae
 			viewInfo.subresourceRange.layerCount = 1;
 
 			LOG_VULKAN_ERROR(
-				vkCreateImageView(logicalDevice.device, &viewInfo, nullptr, &image.view),
+				vkCreateImageView(context.logicalDevice.device, &viewInfo, nullptr, &image.view),
 				"failed to create image view!"
 			);
 		}
 
-		inline void GenerateMipmaps(const CommandBuffer& commandBuffer, const PhysicalDevice& physicalDevice, Image& image)
+		inline void GenerateMipmaps(const CommandBuffer& commandBuffer, const Context& context, Image& image)
 		{
 			VkFormatProperties formatProperties;
-			vkGetPhysicalDeviceFormatProperties(physicalDevice.physicalDevice, image.format, &formatProperties);
+			vkGetPhysicalDeviceFormatProperties(context.physicalDevice.physicalDevice, image.format, &formatProperties);
 
 			if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 				throw std::runtime_error("texture image format does not support linear blitting!");
@@ -115,7 +116,7 @@ namespace dae
 				1, &barrier);
 		}
 
-		inline void transitionImageLayout(const CommandBuffer& commandBuffer, const Image& image, 
+		inline void transitionImageLayout(const CommandBuffer& commandBuffer, Image& image, 
 			VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
 			VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
 			VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -143,6 +144,8 @@ namespace dae
 				0, nullptr,
 				1, &barrier
 			);
+
+			image.layout = newLayout;
 		}
 	}
 }
