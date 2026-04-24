@@ -1,0 +1,125 @@
+#pragma once
+
+
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
+#include "Window.h"
+#include "Context.h"
+#include "Vertex.h"
+#include "Common.h"
+#include "Swapchain.h"
+#include "Image.h"
+#include "Sampler.h"
+#include "CommandBuffer.h"
+#include "Buffer.h"
+#include "DescriptorSetLayout.h"
+#include "DescriptorPool.h"
+#include "DescriptorSet.h"
+#include "Fence.h"
+#include "Semaphore.h"
+#include "RenderPass.h"
+#include "GraphicsPipeline.h"
+#include "GraphicsPipelineLayout.h"
+
+constexpr static uint32_t WIDTH = 800;
+constexpr static uint32_t HEIGHT = 600;
+
+const std::string MODEL_PATH = "resources/models/viking_room.obj";
+const std::string TEXTURE_PATH = "resources/textures/viking_room.png";
+
+constexpr static int MAX_FRAMES_IN_FLIGHT = 3;
+
+const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
+
+const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+#ifdef NDEBUG
+constexpr static bool enableValidationLayers = false;
+#else
+constexpr static bool enableValidationLayers = true;
+#endif
+
+
+struct UniformBufferObject
+{
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+};
+
+namespace dae
+{
+	class Application final
+	{
+	public:
+		void Init();
+		bool ShouldClose() const;
+		void PollEvents() const;
+		void DrawFrame();
+		void Cleanup();
+
+	private:
+        void CreateWindow();
+        void CreateContext();
+        void CreateRenderPass();
+        void CreateDescriptorSetLayout();
+        void CreateGraphicsPipeline();
+        void CreateDepthResources();
+        void CreateTextureImage();
+        void CreateTextureSampler();
+        void LoadModel();
+        void CreateVertexBuffer();
+        void CreateIndexBuffer();
+        void CreateUniformBuffers();
+        void CreateDescriptorPool();
+        void CreateDescriptorSets();
+        void CreateSyncObjects();
+
+        void CleanupSwapchain();
+        void RecreateSwapchain();
+        void RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex);
+
+        VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
+        VkFormat FindDepthFormat() const;
+        bool HasStencilComponent(VkFormat format) const;
+        void UpdateUniformBuffer(uint32_t currentImage) const;
+
+		Window m_window{};
+        Context m_context{};
+
+        Swapchain m_swapchain{};
+
+        RenderPass m_renderPass{};
+        DescriptorSetLayout m_descriptorSetLayout{};
+        DescriptorPool m_descriptorPool;
+        std::vector<DescriptorSet> m_descriptorSets;
+        GraphicsPipelineLayout m_graphicsPipelineLayout{};
+        GraphicsPipeline m_graphicsPipeline{};
+
+        std::vector<CommandBuffer> m_renderCommandBuffers;
+
+        std::vector<Semaphore> m_imageAvailableSemaphores;
+        std::vector<Semaphore> m_renderFinishedSemaphores;
+        std::vector<Fence> m_inFlightFences;
+        uint32_t currentFrame = 0;
+
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        Buffer m_vertexBuffer{};
+        Buffer m_indexBuffer{};
+
+        std::vector<Buffer> m_uniformBuffers;
+        std::vector<void*> uniformBuffersMapped;
+
+        Image m_textureImage{};
+        Sampler m_sampler{};
+        Image m_depthImage{};
+
+        DeletionQueue m_applicationDeletionQueue{};
+	};
+}

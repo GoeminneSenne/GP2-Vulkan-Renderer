@@ -1,14 +1,5 @@
 #include "Window.h"
 
-dae::Window::Window(int width, int height, std::string title)
-  :	width{ width },
-	height{height},
-	title{std::move(title)},
-	wasResized{false}
-{
-	InitWindow();
-}
-
 void dae::Window::Destroy()
 {
 	glfwDestroyWindow(window);
@@ -26,8 +17,12 @@ void dae::Window::PollEvents() const
 	glfwPollEvents();
 }
 
-void dae::Window::InitWindow()
+void dae::Window::InitWindow(int width, int height, const std::string& title)
 {
+	this->width = width;
+	this->height = height;
+	this->title = title;
+
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);

@@ -9,18 +9,17 @@ namespace dae
 {
 	struct Window final
 	{
-		explicit Window(int width, int height, std::string title);
 		void Destroy();
 
-		void InitWindow();
+		void InitWindow(int width, int height, const std::string& title);
 		void PollEvents() const;
 		bool ShouldClose() const;
 
-		int width;
-		int height;
-		std::string title;
-		bool wasResized;
-		GLFWwindow* window;
+		int width{};
+		int height{};
+		std::string title{};
+		bool wasResized{};
+		GLFWwindow* window{};
 
 	private:
 		static void FramebufferResizeCallback(GLFWwindow* glfwWindow, int width, int height);
