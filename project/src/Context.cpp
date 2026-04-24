@@ -1,0 +1,82 @@
+#include "Context.h"
+
+#include "Common.h"
+#include "InstanceBuilder.h"
+#include "LogicalDeviceBuilder.h"
+#include "PhysicalDeviceSelector.h"
+#include "Window.h"
+#include "GLFW/glfw3.h"
+
+dae::ContextFactory::ContextFactory(ContextConfig config)
+	: m_config{std::move(config)}
+{}
+
+void dae::ContextFactory::Create(const Window* pWindow, Context& context)
+{
+	CreateInstance(context);
+	CreateSurface(context, pWindow);
+	PickPhysicalDevice(context);
+	CreateLogicalDevice(context);
+	CreateCommandPool(context);
+	CreateAllocator(context);
+}
+
+void dae::ContextFactory::CreateInstance(Context& context)
+{
+	InstanceBuilder instanceBuilder = {};
+	instanceBuilder
+		.SetApplicationName("Hello Triangle")
+		.SetApiVersion(VK_MAKE_VERSION(1, 0, 0))
+		.SetEngineName("No Engine")
+		.SetEngineVersion(VK_MAKE_VERSION(1, 0, 0))
+		.SetApiVersion(VK_API_VERSION_1_0)
+		.UseValidation(m_config.enableValidation)
+		.AddValidationLayers(m_config.validationLayers)
+		.Build(context.instance);
+}
+
+void dae::ContextFactory::CreateSurface(Context& context, const Window* pWindow)
+{
+	LOG_VULKAN_ERROR(
+		glfwCreateWindowSurface(context.instance.instance, pWindow->window, nullptr, &context.instance.surface),
+		"failed to create window surface!"
+	);
+}
+
+void dae::ContextFactory::PickPhysicalDevice(Context& context)
+{
+	PhysicalDeviceSelector physicalDeviceSelector = {};
+	physicalDeviceSelector
+		.AddDeviceExtensions(m_config.deviceExtensions)
+		.PickPhysicalDevice(context.instance, context.physicalDevice);
+}
+
+void dae::ContextFactory::CreateLogicalDevice(Context& context)
+{
+	LogicalDeviceBuilder logicalDeviceBuilder = {};
+	logicalDeviceBuilder
+		.EnablebleAnisotropy(true)
+		.AddDeviceExtensions(m_config.deviceExtensions)
+		.UseValidation(m_config.enableValidation)
+		.AddValidationLayers(m_config.validationLayers)
+		.Build(context.physicalDevice,context.logicalDevice);
+}
+
+void dae::ContextFactory::CreateCommandPool(Context& context)
+{
+	context.commandPool.CreateCommandPool(&context.logicalDevice);
+}
+
+void dae::ContextFactory::CreateAllocator(Context& context)
+{
+	VmaAllocatorCreateInfo createInfo{};
+	createInfo.physicalDevice = context.physicalDevice.physicalDevice;
+	createInfo.device = context.logicalDevice.device;
+	createInfo.instance = context.instance.instance;
+	createInfo.flags = 0;
+
+	LOG_VULKAN_ERROR(
+		vmaCreateAllocator(&createInfo, &context.allocator),
+		"failed to create VMA allocator!"
+	);
+}

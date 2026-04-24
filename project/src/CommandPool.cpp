@@ -5,15 +5,14 @@
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
 
-void dae::CommandPool::CreateCommandPool(const PhysicalDevice& physicalDevice,
-	LogicalDevice* pLogicalDevice)
+void dae::CommandPool::CreateCommandPool(LogicalDevice* pLogicalDevice)
 {
 	m_pLogicalDevice = pLogicalDevice;
 
 	VkCommandPoolCreateInfo poolInfo{};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	poolInfo.queueFamilyIndex = physicalDevice.queueFamilyIndices.graphicsFamily.value();
+	poolInfo.queueFamilyIndex = pLogicalDevice->graphicsQueue.GetFamily();
 
 	LOG_VULKAN_ERROR(
 		vkCreateCommandPool(pLogicalDevice->device, &poolInfo, nullptr, &m_commandPool),
@@ -115,5 +114,4 @@ void dae::CommandPool::EndSingleTimeCommand(CommandBuffer& commandBuffer) const
 
 	vkFreeCommandBuffers(m_pLogicalDevice->device, m_commandPool, 1, &commandBuffer.commandBuffer);
 }
-
 

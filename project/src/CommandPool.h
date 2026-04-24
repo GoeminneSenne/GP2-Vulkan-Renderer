@@ -12,7 +12,7 @@ namespace dae
 	class CommandPool final
 	{
 	public:
-		void CreateCommandPool(const PhysicalDevice& physicalDevice, LogicalDevice* pLogicalDevice);
+		void CreateCommandPool(LogicalDevice* pLogicalDevice);
 		void Destroy();
 
 		CommandBuffer Allocate() const;
@@ -23,7 +23,6 @@ namespace dae
 
 		CommandBuffer BeginSingleTimeCommand() const;
 		void EndSingleTimeCommand(CommandBuffer& commandBuffer) const;
-
 	private:
 		VkCommandPool m_commandPool = VK_NULL_HANDLE;
 		LogicalDevice* m_pLogicalDevice = nullptr;
