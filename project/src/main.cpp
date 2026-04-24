@@ -69,6 +69,8 @@
 #include "DescriptorPool.h"
 #include "DescriptorSet.h"
 #include "DescriptorSetWriter.h"
+#include "Fence.h"
+#include "Semaphore.h"
 #include "SwapchainHelpers.h"
 
 
@@ -141,21 +143,25 @@ private:
 
     Swapchain m_swapchain{};
 
-    //std::vector<VkFramebuffer> swapChainFramebuffers;
-
     VkRenderPass renderPass{};
-    DescriptorSetLayout m_descriptorSetLayout{};
+    
+	DescriptorSetLayout m_descriptorSetLayout{};
     DescriptorPool m_descriptorPool;
     std::vector<DescriptorSet> m_descriptorSets;
-    VkPipelineLayout pipelineLayout{};
+    
+	VkPipelineLayout pipelineLayout{};
     VkPipeline graphicsPipeline{};
 
     CommandPool m_commandPool{};
     std::vector<CommandBuffer> m_renderCommandBuffers;
 
-    std::vector<VkSemaphore> imageAvailableSemaphores;
-    std::vector<VkSemaphore> renderFinishedSemaphores;
-    std::vector<VkFence> inFlightFences;
+    std::vector<Semaphore> m_imageAvailableSemaphores;
+    std::vector<Semaphore> m_renderFinishedSemaphores;
+    std::vector<Fence> m_inFlightFences;
+
+    //std::vector<VkSemaphore> imageAvailableSemaphores;
+    //std::vector<VkSemaphore> renderFinishedSemaphores;
+    //std::vector<VkFence> inFlightFences;
     uint32_t currentFrame = 0;
 
     VmaAllocator allocator{};
@@ -187,7 +193,6 @@ private:
     	createVmaAllocator();
         createDepthResources();
         SwapchainHelpers::CreateFramebuffers(m_logicalDevice, renderPass, m_depthImage, m_swapchain);
-    	//createFramebuffers();
         createTextureImage();
         CreateTextureSampler();
         loadModel();
@@ -239,14 +244,19 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            vkDestroySemaphore(m_logicalDevice.device, imageAvailableSemaphores[i], nullptr);
-            vkDestroyFence(m_logicalDevice.device, inFlightFences[i], nullptr);
+            m_imageAvailableSemaphores[i].Destroy(m_logicalDevice);
+            m_inFlightFences[i].Destroy(m_logicalDevice);
+
+            //vkDestroySemaphore(m_logicalDevice.device, imageAvailableSemaphores[i], nullptr);
+            //vkDestroyFence(m_logicalDevice.device, inFlightFences[i], nullptr);
 
         }
 
-        for (const auto& semaphore : renderFinishedSemaphores)
+        for (const auto& semaphore : m_renderFinishedSemaphores)
         {
-            vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
+            semaphore.Destroy(m_logicalDevice);
+
+            //vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
         }
 
         m_commandPool.Destroy();
@@ -260,7 +270,6 @@ private:
 
     void CreateInstance()
     {
-        
         InstanceBuilder instanceBuilder = {};
         instanceBuilder
             .SetApplicationName("Hello Triangle")
@@ -320,17 +329,23 @@ private:
 
         //Semaphore reconstruction
         //TODO: should be in seperate function or handled elsewhere??
-        renderFinishedSemaphores.resize(m_swapchain.images.size());
+        /*
+        m_renderFinishedSemaphores.resize(m_swapchain.images.size());
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		*/
 
-        for (auto& semaphore : renderFinishedSemaphores)
+        for (auto& semaphore : m_renderFinishedSemaphores)
         {
+            semaphore.Destroy(m_logicalDevice);
+            semaphore.Create(m_logicalDevice);
+            /*
             if (semaphore != VK_NULL_HANDLE)
                 vkDestroySemaphore(m_logicalDevice.device, semaphore, nullptr);
 
             vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &semaphore);
+			*/
         }
     }
 
@@ -892,10 +907,10 @@ private:
 
     void createSyncObjects()
     {
-        imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-        inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+        m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+        m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
         
-    	renderFinishedSemaphores.resize(m_swapchain.images.size());
+    	m_renderFinishedSemaphores.resize(m_swapchain.images.size());
 
         VkSemaphoreCreateInfo semaphoreInfo{};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -906,27 +921,36 @@ private:
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i )
         {
-            if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            m_imageAvailableSemaphores[i].Create(m_logicalDevice);
+            m_inFlightFences[i].Create(m_logicalDevice);
+
+            /*
+        	if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
                 //vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
                 vkCreateFence(m_logicalDevice.device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create semaphores!");
-	        
+	        */
         }
 
         for (size_t i = 0; i < m_swapchain.images.size(); ++i)
         {
+            m_renderFinishedSemaphores[i].Create(m_logicalDevice);
+
+            /*
 	        if (vkCreateSemaphore(m_logicalDevice.device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
                 throw std::runtime_error("failed to create semaphore");
+			*/
         }
 
     }
 
     void drawFrame()
     {
-        vkWaitForFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        //vkWaitForFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+        m_inFlightFences[currentFrame].Wait(m_logicalDevice);
 
         uint32_t imageIndex;
-        VkResult result = vkAcquireNextImageKHR(m_logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+        VkResult result = vkAcquireNextImageKHR(m_logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrame].Get(), VK_NULL_HANDLE, &imageIndex);
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
@@ -938,15 +962,18 @@ private:
 
         UpdateUniformBuffer(currentFrame);
 
-        vkResetFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame]);
+        //vkResetFences(m_logicalDevice.device, 1, &inFlightFences[currentFrame]);
+        m_inFlightFences[currentFrame].Reset(m_logicalDevice);
 
+        ///Record
         vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
         recordRenderCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
 
+        ///Submit
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+        VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphores[currentFrame].Get()};
         VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = waitSemaphores;
@@ -955,14 +982,14 @@ private:
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].commandBuffer;
 
-        //TODO: make sure you create semaphores based on the nr of swap chain images / destroy them as well
-        VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[imageIndex]};
+        VkSemaphore signalSemaphores[] = {m_renderFinishedSemaphores[imageIndex].Get()};
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(m_logicalDevice.graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+        if (vkQueueSubmit(m_logicalDevice.graphicsQueue, 1, &submitInfo, m_inFlightFences[currentFrame].Get()) != VK_SUCCESS)
             throw std::runtime_error("failed to submit draw command buffer!");
 
+        ///Present
         VkPresentInfoKHR presentInfo{};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         
