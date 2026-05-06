@@ -21,7 +21,6 @@
 #include "DescriptorSetLayoutBuilder.h"
 #include "GraphicsPipelineBuilder.h"
 #include "GraphicsPipelineLayoutBuilder.h"
-#include "ImageBuilder.h"
 #include "RenderPassBuilder.h"
 #include "Shader.h"
 #include "ShaderLoader.h"
