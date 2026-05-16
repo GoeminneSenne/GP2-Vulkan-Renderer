@@ -1,11 +1,23 @@
-#include "ShaderLoader.h"
+#include "Shader.h"
 
 #include <fstream>
 #include <stdexcept>
 
 #include "Common.h"
 #include "Context.h"
-#include "Shader.h"
+
+/// Shader
+/////////////////////////////////////
+void dae::Shader::Destroy(const Context& context)
+{
+	if (module != VK_NULL_HANDLE)
+	{
+		vkDestroyShaderModule(context.logicalDevice.device, module, nullptr);
+	}
+}
+
+///ShaderLoader
+/////////////////////////////////////////////////////////
 
 void dae::ShaderLoader::Load(const Context& context, Shader& shader) const
 {

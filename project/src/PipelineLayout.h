@@ -5,7 +5,7 @@
 
 namespace dae
 {
-	struct GraphicsPipelineLayout final
+	struct PipelineLayout final
 	{
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 		

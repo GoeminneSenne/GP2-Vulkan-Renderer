@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 namespace dae
 {
 	//TODO: misschien mag dit ook in common.h

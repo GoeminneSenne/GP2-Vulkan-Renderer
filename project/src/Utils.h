@@ -2,6 +2,8 @@
 #include "QueueFamilyIndices.h"
 #include <vulkan/vulkan_core.h>
 
+#include "SwapchainSupportDetails.h"
+
 namespace dae
 {
 	struct Context;

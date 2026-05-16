@@ -1,8 +1,12 @@
-#include "SamplerBuilder.h"
+#include "Sampler.h"
 
 #include "Common.h"
 #include "Context.h"
-#include "Sampler.h"
+
+void dae::Sampler::Destroy(const Context& context)
+{
+	vkDestroySampler(context.logicalDevice.device, sampler, nullptr);
+}
 
 void dae::SamplerBuilder::Build(const Context& context, Sampler& sampler) const
 {

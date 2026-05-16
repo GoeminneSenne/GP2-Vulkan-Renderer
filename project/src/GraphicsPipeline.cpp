@@ -1,11 +1,18 @@
-#include "GraphicsPipelineBuilder.h"
+#include "GraphicsPipeline.h"
 
 #include "Common.h"
-#include "Context.h"
-#include "GraphicsPipeline.h"
-#include "GraphicsPipelineLayout.h"
+#include "DescriptorSet.h"
+#include "PipelineLayout.h"
 #include "RenderPass.h"
 #include "Shader.h"
+
+void dae::GraphicsPipeline::Destroy(const Context& context) const
+{
+	if (pipeline != VK_NULL_HANDLE)
+	{
+		vkDestroyPipeline(context.logicalDevice.device, pipeline, nullptr);
+	}
+}
 
 void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipeline& pipeline)
 {
@@ -98,7 +105,7 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 	);
 }
 
-dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::SetPipelineLayout(const GraphicsPipelineLayout& layout)
+dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::SetPipelineLayout(const PipelineLayout& layout)
 {
 	m_layout = &layout;
 	return *this;
@@ -162,5 +169,28 @@ dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::AddVertexInputAttrib
 	const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 {
 	m_attributeDescriptions.insert(m_attributeDescriptions.end(), attributeDescriptions.begin(), attributeDescriptions.end());
+	return *this;
+}
+
+void dae::GraphicsPipelineLayoutBuilder::Build(const Context& context,
+	PipelineLayout& pipelineLayout)
+{
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_setLayouts.size());
+	pipelineLayoutInfo.pSetLayouts = m_setLayouts.data();
+	pipelineLayoutInfo.pushConstantRangeCount = 0;
+	pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+	LOG_VULKAN_ERROR(
+		vkCreatePipelineLayout(context.logicalDevice.device, &pipelineLayoutInfo, nullptr, &pipelineLayout.layout),
+		"failed to create pipeline layout!"
+	);
+}
+
+dae::GraphicsPipelineLayoutBuilder& dae::GraphicsPipelineLayoutBuilder::AddDescriptorSetLayout(
+	DescriptorSetLayout setLayout)
+{
+	m_setLayouts.push_back(setLayout.layout);
 	return *this;
 }

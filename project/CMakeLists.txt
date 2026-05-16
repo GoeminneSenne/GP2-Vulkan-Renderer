@@ -2,10 +2,10 @@
 set(SOURCES
 	"src/main.cpp"
  "src/Window.cpp" 
- "src/InstanceBuilder.cpp" 
+  
  "src/Instance.cpp"
   
- "src/PhysicalDeviceSelector.cpp" "src/LogicalDeviceBuilder.cpp" "src/LogicalDevice.cpp" "src/Swapchain.cpp" "src/SwapchainSupportDetails.cpp" "src/Image.cpp" "src/ShaderLoader.cpp" "src/SamplerBuilder.cpp" "src/CommandPool.cpp"  "src/DescriptorSetLayoutBuilder.cpp" "src/DescriptorPool.cpp" "src/DescriptorSetWriter.cpp" "src/FramebufferBuilder.cpp" "src/Fence.cpp" "src/Semaphore.cpp" "src/Queue.cpp" "src/RenderPassBuilder.cpp" "src/GraphicsPipelineLayoutBuilder.cpp" "src/GraphicsPipelineBuilder.cpp" "src/VulkanDemoApplication.cpp" "src/Context.cpp" "src/Application.cpp")
+ "src/PhysicalDevice.cpp"  "src/LogicalDevice.cpp" "src/Swapchain.cpp"  "src/Image.cpp" "src/Shader.cpp" "src/Sampler.cpp"       "src/Fence.cpp" "src/Semaphore.cpp" "src/Queue.cpp" "src/RenderPass.cpp"   "src/VulkanDemoApplication.cpp" "src/Context.cpp" "src/Application.cpp" "src/CommandBuffer.cpp" "src/DescriptorSet.cpp" "src/GraphicsPipeline.cpp" "src/SwapchainSupportDetails.cpp" "src/Framebuffer.cpp")
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})

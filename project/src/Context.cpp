@@ -1,9 +1,7 @@
 #include "Context.h"
 
 #include "Common.h"
-#include "InstanceBuilder.h"
-#include "LogicalDeviceBuilder.h"
-#include "PhysicalDeviceSelector.h"
+#include "LogicalDevice.h"
 #include "Window.h"
 #include "GLFW/glfw3.h"
 

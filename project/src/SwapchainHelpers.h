@@ -3,7 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Context.h"
-#include "FramebufferBuilder.h"
+#include "Framebuffer.h"
 #include "ImageHelpers.h"
 #include "LogicalDevice.h"
 #include "RenderPass.h"

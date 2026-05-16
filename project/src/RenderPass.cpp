@@ -1,8 +1,12 @@
-#include "RenderPassBuilder.h"
+#include "RenderPass.h"
 
 #include "Common.h"
 #include "Context.h"
-#include "RenderPass.h"
+
+void dae::RenderPass::Destroy(const Context& context) const
+{
+    vkDestroyRenderPass(context.logicalDevice.device, renderPass, nullptr);
+}
 
 void dae::RenderPassBuilder::Build(const Context& context, RenderPass& renderPass) const
 {
@@ -89,3 +93,5 @@ dae::RenderPassBuilder& dae::RenderPassBuilder::SetSamples(VkSampleCountFlagBits
     m_samples = samples;
     return *this;
 }
+
+

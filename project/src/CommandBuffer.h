@@ -1,7 +1,7 @@
 #pragma once
 
+#include <vector>
 #include <vulkan/vulkan_core.h>
-#include "LogicalDevice.h"
 
 namespace dae
 {
@@ -11,19 +11,27 @@ namespace dae
 	{
 		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 
-		void Begin(VkCommandBufferUsageFlagBits flags = {})
-		{
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = flags;
+		void Begin(VkCommandBufferUsageFlags flags = {});
+		void End();
+	};
 
-			vkBeginCommandBuffer(commandBuffer, &beginInfo);
-		}
+	class CommandPool final
+	{
+	public:
+		void CreateCommandPool(LogicalDevice* pLogicalDevice);
+		void Destroy();
 
-		void End()
-		{
-			vkEndCommandBuffer(commandBuffer);
-		}
+		CommandBuffer Allocate() const;
+		std::vector<CommandBuffer> Allocate(uint32_t count) const;
 
+		void Free(CommandBuffer& commandBuffer) const;
+		void Free(std::vector<CommandBuffer>& commandBuffers) const;
+
+		CommandBuffer BeginSingleTimeCommand() const;
+		void EndSingleTimeCommand(CommandBuffer& commandBuffer) const;
+
+	private:
+		VkCommandPool m_commandPool = VK_NULL_HANDLE;
+		LogicalDevice* m_pLogicalDevice = nullptr;
 	};
 }

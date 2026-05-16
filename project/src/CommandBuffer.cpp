@@ -1,9 +1,26 @@
-#include "CommandPool.h"
-
 #include "CommandBuffer.h"
+
 #include "Common.h"
 #include "LogicalDevice.h"
-#include "PhysicalDevice.h"
+
+///CommandBuffer
+///////////////////////////////////////////
+void dae::CommandBuffer::Begin(VkCommandBufferUsageFlags flags)
+{
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = flags;
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+}
+
+void dae::CommandBuffer::End()
+{
+	vkEndCommandBuffer(commandBuffer);
+}
+
+///CommandPool
+///////////////////////////////////////////
 
 void dae::CommandPool::CreateCommandPool(LogicalDevice* pLogicalDevice)
 {
@@ -63,7 +80,7 @@ std::vector<dae::CommandBuffer> dae::CommandPool::Allocate(uint32_t count) const
 	commandBuffers.reserve(count);
 	for (auto& rawBuffer : rawBuffers)
 	{
-		commandBuffers.emplace_back(CommandBuffer{rawBuffer});
+		commandBuffers.emplace_back(CommandBuffer{ rawBuffer });
 	}
 	return commandBuffers;
 }
@@ -114,4 +131,3 @@ void dae::CommandPool::EndSingleTimeCommand(CommandBuffer& commandBuffer) const
 
 	vkFreeCommandBuffers(m_pLogicalDevice->device, m_commandPool, 1, &commandBuffer.commandBuffer);
 }
-

@@ -1,11 +1,14 @@
 #pragma once
 
+
+#include <vector>
 #include <vulkan/vulkan_core.h>
+#include <vk_mem_alloc.h>
+
+#include "CommandBuffer.h"
 #include "Instance.h"
 #include "PhysicalDevice.h"
 #include "LogicalDevice.h"
-#include "CommandPool.h"
-#include <vk_mem_alloc.h>
 
 namespace dae
 {

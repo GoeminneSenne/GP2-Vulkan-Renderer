@@ -1,10 +1,9 @@
-#include  "PhysicalDeviceSelector.h"
+#include  "PhysicalDevice.h"
 
 #include <set>
 #include <vector>
 
 #include "Instance.h"
-#include "SwapchainSupportDetails.h"
 #include "Utils.h"
 
 dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtension(const char* extensionName)

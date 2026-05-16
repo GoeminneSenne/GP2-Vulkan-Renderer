@@ -17,14 +17,13 @@
 #include "Sampler.h"
 #include "CommandBuffer.h"
 #include "Buffer.h"
-#include "DescriptorSetLayout.h"
-#include "DescriptorPool.h"
 #include "DescriptorSet.h"
 #include "Fence.h"
 #include "Semaphore.h"
 #include "RenderPass.h"
 #include "GraphicsPipeline.h"
-#include "GraphicsPipelineLayout.h"
+#include "PipelineLayout.h"
+#include "SwapchainSupportDetails.h"
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
@@ -98,7 +97,7 @@ namespace dae
         DescriptorSetLayout m_descriptorSetLayout{};
         DescriptorPool m_descriptorPool;
         std::vector<DescriptorSet> m_descriptorSets;
-        GraphicsPipelineLayout m_graphicsPipelineLayout{};
+        PipelineLayout m_graphicsPipelineLayout{};
         GraphicsPipeline m_graphicsPipeline{};
 
         std::vector<CommandBuffer> m_renderCommandBuffers;

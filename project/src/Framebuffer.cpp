@@ -1,9 +1,12 @@
-#include "FramebufferBuilder.h"
+#include "Framebuffer.h"
 
 #include "Common.h"
 #include "Context.h"
-#include "Framebuffer.h"
-#include "LogicalDevice.h"
+
+void dae::Framebuffer::Destroy(const Context& context) const
+{
+	vkDestroyFramebuffer(context.logicalDevice.device, framebuffer, nullptr);
+}
 
 void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebuffer)
 {
@@ -18,7 +21,7 @@ void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebu
 
     LOG_VULKAN_ERROR(
         vkCreateFramebuffer(context.logicalDevice.device, &framebufferInfo, nullptr, &framebuffer.framebuffer),
-		"failed to create framebuffer!"
+        "failed to create framebuffer!"
     );
 
     framebuffer.extent = { m_width, m_height };
@@ -27,24 +30,25 @@ void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebu
 
 dae::FramebufferBuilder& dae::FramebufferBuilder::SetRenderPass(RenderPass renderPass)
 {
-	m_renderPass = renderPass;
-	return *this;
+    m_renderPass = renderPass;
+    return *this;
 }
 
 dae::FramebufferBuilder& dae::FramebufferBuilder::SetAttachments(const std::vector<VkImageView>& attachments)
 {
-	m_attachments.insert(m_attachments.end(), attachments.begin(), attachments.end());
-	return *this;
+    m_attachments.insert(m_attachments.end(), attachments.begin(), attachments.end());
+    return *this;
 }
 
 dae::FramebufferBuilder& dae::FramebufferBuilder::SetWidth(uint32_t width)
 {
-	m_width = width;
-	return *this;
+    m_width = width;
+    return *this;
 }
 
 dae::FramebufferBuilder& dae::FramebufferBuilder::SetHeight(uint32_t height)
 {
-	m_height = height;
-	return *this;
+    m_height = height;
+    return *this;
 }
+

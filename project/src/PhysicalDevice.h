@@ -6,6 +6,8 @@
 
 namespace dae
 {
+	struct Instance;
+
 	struct PhysicalDevice final
 	{
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -13,5 +15,20 @@ namespace dae
 		SwapchainSupportDetails swapchainSupport;
 		VkPhysicalDeviceProperties properties;
 		VkPhysicalDeviceFeatures features;
+	};
+
+	class PhysicalDeviceSelector final
+	{
+	public:
+		PhysicalDeviceSelector& AddDeviceExtension(const char* extensionName);
+		PhysicalDeviceSelector& AddDeviceExtensions(const std::vector<const char*>& extensionNames);
+
+		void PickPhysicalDevice(const Instance& instance, PhysicalDevice& physicalDevice) const;
+
+	private:
+		bool IsDeviceSuitable(const Instance& instance, VkPhysicalDevice device) const;
+		bool CheckDeviceExtensionsSupport(VkPhysicalDevice device) const;
+
+		std::vector<const char*> deviceExtensions;
 	};
 }

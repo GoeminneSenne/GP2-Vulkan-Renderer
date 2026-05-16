@@ -1,16 +1,13 @@
 #include "Application.h"
 
+#include <array>
+#include <chrono>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "../inc/stb_image.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../inc/tiny_obj_loader.h"
-#include <array>
-#include <chrono>
-
-#include "DescriptorSet.h"
-#include "DescriptorSetWriter.h"
-#include "SamplerBuilder.h"
 
 //VMA includes
 #define VMA_IMPLEMENTATION
@@ -18,15 +15,14 @@
 #define VMA_DEBUG_LOG_FORMAT
 #include <vk_mem_alloc.h>
 
-#include "DescriptorSetLayoutBuilder.h"
-#include "GraphicsPipelineBuilder.h"
-#include "GraphicsPipelineLayoutBuilder.h"
-#include "RenderPassBuilder.h"
+#include "DescriptorSet.h"
+#include "Sampler.h"
+#include "RenderPass.h"
 #include "Shader.h"
-#include "ShaderLoader.h"
 #include "SwapchainHelpers.h"
 #include "Vertex.h"
 #include "BufferHelpers.h"
+#include "Framebuffer.h"
 
 
 void dae::Application::Init()
