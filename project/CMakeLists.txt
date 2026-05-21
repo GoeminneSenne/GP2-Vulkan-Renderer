@@ -1,11 +1,26 @@
 #Source files
 set(SOURCES
-	"src/application/main.cpp"
- "src/framework/Window.cpp" 
-  
- "src/framework/Instance.cpp"
-  
- "src/framework/PhysicalDevice.cpp"  "src/framework/LogicalDevice.cpp" "src/framework/Swapchain.cpp"  "src/framework/Image.cpp" "src/framework/Shader.cpp" "src/framework/Sampler.cpp"       "src/framework/Fence.cpp" "src/framework/Semaphore.cpp" "src/framework/Queue.cpp" "src/framework/RenderPass.cpp"    "src/framework/Context.cpp" "src/application/VulkanDemoApplication.cpp" "src/framework/CommandBuffer.cpp" "src/framework/DescriptorSet.cpp" "src/framework/GraphicsPipeline.cpp" "src/framework/SwapchainSupportDetails.cpp" "src/framework/Framebuffer.cpp")
+	src/application/main.cpp
+	src/application/VulkanDemoApplication.cpp
+	src/framework/Window.cpp
+	src/framework/Instance.cpp
+	src/framework/PhysicalDevice.cpp 
+	src/framework/LogicalDevice.cpp
+	src/framework/Swapchain.cpp
+	src/framework/Image.cpp
+	src/framework/Shader.cpp
+	src/framework/Sampler.cpp
+	src/framework/Fence.cpp
+	src/framework/Semaphore.cpp
+	src/framework/Queue.cpp
+	src/framework/RenderPass.cpp
+	src/framework/Context.cpp
+	src/framework/CommandBuffer.cpp
+	src/framework/DescriptorSet.cpp
+	src/framework/GraphicsPipeline.cpp
+	src/framework/SwapchainSupportDetails.cpp
+	src/framework/Framebuffer.cpp
+)
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})

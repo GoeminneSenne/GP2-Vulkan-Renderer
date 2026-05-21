@@ -287,10 +287,7 @@ void dae::VulkanDemoApplication::CreateTextureImage()
         throw std::runtime_error("failed to load texture image!");
 
     Buffer stagingBuffer;
-
-    BufferHelpers::CreateBuffer(m_context, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        stagingBuffer);
+    BufferHelpers::CreateStaging(m_context, imageSize, stagingBuffer);
 
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
@@ -402,18 +399,14 @@ void dae::VulkanDemoApplication::CreateVertexBuffer()
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     Buffer stagingBuffer;
-
-    BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        stagingBuffer);
+    BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
 
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VMA_MEMORY_USAGE_AUTO, 0, m_vertexBuffer);
+    BufferHelpers::CreateVertex(m_context, bufferSize, m_vertexBuffer);
 	m_applicationDeletionQueue.PushDeletor([&]() {m_vertexBuffer.Destroy(m_context); });
 
 
@@ -430,19 +423,14 @@ void dae::VulkanDemoApplication::CreateIndexBuffer()
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     Buffer stagingBuffer;
-
-    BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        stagingBuffer);
+    BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
 
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, indices.data(), (size_t)bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
 
-    BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VMA_MEMORY_USAGE_AUTO, 0,
-        m_indexBuffer);
+	BufferHelpers::CreateIndex(m_context, bufferSize, m_indexBuffer);
     m_applicationDeletionQueue.PushDeletor([&]() {m_indexBuffer.Destroy(m_context); });
 
 
@@ -461,9 +449,7 @@ void dae::VulkanDemoApplication::CreateUniformBuffers()
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        BufferHelpers::CreateBuffer(m_context, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            m_uniformBuffers[i]);
+        BufferHelpers::CreateUniform(m_context, bufferSize, m_uniformBuffers[i]);
 
         vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
     }
