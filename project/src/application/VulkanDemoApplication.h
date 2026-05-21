@@ -8,22 +8,22 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include "Window.h"
-#include "Context.h"
-#include "Vertex.h"
-#include "Common.h"
-#include "Swapchain.h"
-#include "Image.h"
-#include "Sampler.h"
-#include "CommandBuffer.h"
-#include "Buffer.h"
-#include "DescriptorSet.h"
-#include "Fence.h"
-#include "Semaphore.h"
-#include "RenderPass.h"
-#include "GraphicsPipeline.h"
-#include "PipelineLayout.h"
-#include "SwapchainSupportDetails.h"
+#include "../framework/Window.h"
+#include "../framework/Context.h"
+#include "../framework/Vertex.h"
+#include "../framework/Common.h"
+#include "../framework/Swapchain.h"
+#include "../framework/Image.h"
+#include "../framework/Sampler.h"
+#include "../framework/CommandBuffer.h"
+#include "../framework/Buffer.h"
+#include "../framework/DescriptorSet.h"
+#include "../framework/Fence.h"
+#include "../framework/Semaphore.h"
+#include "../framework/RenderPass.h"
+#include "../framework/GraphicsPipeline.h"
+#include "../framework/PipelineLayout.h"
+#include "../framework/SwapchainSupportDetails.h"
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
@@ -53,7 +53,7 @@ struct UniformBufferObject
 
 namespace dae
 {
-	class Application final
+	class VulkanDemoApplication final
 	{
 	public:
 		void Init();

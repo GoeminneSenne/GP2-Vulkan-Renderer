@@ -16,6 +16,8 @@ void dae::Semaphore::Create(const Context& context)
 
 void dae::Semaphore::Destroy(const Context& context) const
 {
+	if (m_semaphore == VK_NULL_HANDLE) return;
+
 	vkDestroySemaphore(context.logicalDevice.device, m_semaphore, nullptr);
 }
 

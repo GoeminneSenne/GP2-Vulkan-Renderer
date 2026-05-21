@@ -1,13 +1,13 @@
-#include "Application.h"
+#include "VulkanDemoApplication.h"
 
 #include <array>
 #include <chrono>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "../inc/stb_image.h"
+#include "../../inc/stb_image.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "../inc/tiny_obj_loader.h"
+#include "../../inc/tiny_obj_loader.h"
 
 //VMA includes
 #define VMA_IMPLEMENTATION
@@ -15,17 +15,17 @@
 #define VMA_DEBUG_LOG_FORMAT
 #include <vk_mem_alloc.h>
 
-#include "DescriptorSet.h"
-#include "Sampler.h"
-#include "RenderPass.h"
-#include "Shader.h"
-#include "SwapchainHelpers.h"
-#include "Vertex.h"
-#include "BufferHelpers.h"
-#include "Framebuffer.h"
+#include "../framework/DescriptorSet.h"
+#include "../framework/Sampler.h"
+#include "../framework/RenderPass.h"
+#include "../framework/Shader.h"
+#include "../framework/SwapchainHelpers.h"
+#include "../framework/Vertex.h"
+#include "../framework/BufferHelpers.h"
+#include "../framework/Framebuffer.h"
 
 
-void dae::Application::Init()
+void dae::VulkanDemoApplication::Init()
 {
     CreateWindow();
 	CreateContext();
@@ -48,17 +48,17 @@ void dae::Application::Init()
 	CreateSyncObjects();
 }
 
-bool dae::Application::ShouldClose() const
+bool dae::VulkanDemoApplication::ShouldClose() const
 {
 	return m_window.ShouldClose();
 }
 
-void dae::Application::PollEvents() const
+void dae::VulkanDemoApplication::PollEvents() const
 {
 	m_window.PollEvents();
 }
 
-void dae::Application::DrawFrame()
+void dae::VulkanDemoApplication::DrawFrame()
 {
     m_inFlightFences[currentFrame].Wait(m_context);
 
@@ -126,7 +126,7 @@ void dae::Application::DrawFrame()
 
 }
 
-void dae::Application::Cleanup()
+void dae::VulkanDemoApplication::Cleanup()
 {
 	vkDeviceWaitIdle(m_context.logicalDevice.device);
 
@@ -153,13 +153,13 @@ void dae::Application::Cleanup()
     m_applicationDeletionQueue.Flush();
 }
 
-void dae::Application::CreateWindow()
+void dae::VulkanDemoApplication::CreateWindow()
 {
     m_window.InitWindow(WIDTH, HEIGHT, "Vulkan Demo");
     m_applicationDeletionQueue.PushDeletor([&]() {m_window.Destroy(); });
 }
 
-void dae::Application::CreateContext()
+void dae::VulkanDemoApplication::CreateContext()
 {
     ContextConfig config{
         enableValidationLayers,
@@ -177,7 +177,7 @@ void dae::Application::CreateContext()
     m_applicationDeletionQueue.PushDeletor([&]() {vmaDestroyAllocator(m_context.allocator); });
 }
 
-void dae::Application::CreateRenderPass()
+void dae::VulkanDemoApplication::CreateRenderPass()
 {
     RenderPassBuilder renderPassBuilder = {};
     renderPassBuilder
@@ -188,7 +188,7 @@ void dae::Application::CreateRenderPass()
     m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
 }
 
-void dae::Application::CreateDescriptorSetLayout()
+void dae::VulkanDemoApplication::CreateDescriptorSetLayout()
 {
     DescriptorSetLayoutBuilder layoutBuilder{};
     layoutBuilder
@@ -200,7 +200,7 @@ void dae::Application::CreateDescriptorSetLayout()
 
 }
 
-void dae::Application::CreateGraphicsPipeline()
+void dae::VulkanDemoApplication::CreateGraphicsPipeline()
 {
     Shader vertexShader, fragmentShader;
 
@@ -242,7 +242,7 @@ void dae::Application::CreateGraphicsPipeline()
     vertexShader.Destroy(m_context);
 }
 
-void dae::Application::CreateDepthResources()
+void dae::VulkanDemoApplication::CreateDepthResources()
 {
     VkFormat depthFormat = FindDepthFormat();
 
@@ -276,7 +276,7 @@ void dae::Application::CreateDepthResources()
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 }
 
-void dae::Application::CreateTextureImage()
+void dae::VulkanDemoApplication::CreateTextureImage()
 {
     int texWidth, texHeight, texChannels;
     stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight,
@@ -335,7 +335,7 @@ void dae::Application::CreateTextureImage()
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 }
 
-void dae::Application::CreateTextureSampler()
+void dae::VulkanDemoApplication::CreateTextureSampler()
 {
     SamplerBuilder samplerBuilder = {};
     samplerBuilder
@@ -353,7 +353,7 @@ void dae::Application::CreateTextureSampler()
 
 }
 
-void dae::Application::LoadModel()
+void dae::VulkanDemoApplication::LoadModel()
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -397,7 +397,7 @@ void dae::Application::LoadModel()
     }
 }
 
-void dae::Application::CreateVertexBuffer()
+void dae::VulkanDemoApplication::CreateVertexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
@@ -425,7 +425,7 @@ void dae::Application::CreateVertexBuffer()
     stagingBuffer.Destroy(m_context);
 }
 
-void dae::Application::CreateIndexBuffer()
+void dae::VulkanDemoApplication::CreateIndexBuffer()
 {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
@@ -453,7 +453,7 @@ void dae::Application::CreateIndexBuffer()
     stagingBuffer.Destroy(m_context);
 }
 
-void dae::Application::CreateUniformBuffers()
+void dae::VulkanDemoApplication::CreateUniformBuffers()
 {
     m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
@@ -469,7 +469,7 @@ void dae::Application::CreateUniformBuffers()
     }
 }
 
-void dae::Application::CreateDescriptorPool()
+void dae::VulkanDemoApplication::CreateDescriptorPool()
 {
     std::vector<VkDescriptorPoolSize> poolSizes;
     poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
@@ -478,7 +478,7 @@ void dae::Application::CreateDescriptorPool()
     m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
 }
 
-void dae::Application::CreateDescriptorSets()
+void dae::VulkanDemoApplication::CreateDescriptorSets()
 {
     m_descriptorSets = m_descriptorPool.Allocate(m_context, m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
 
@@ -493,7 +493,7 @@ void dae::Application::CreateDescriptorSets()
     }
 }
 
-void dae::Application::CreateSyncObjects()
+void dae::VulkanDemoApplication::CreateSyncObjects()
 {
     m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -519,13 +519,13 @@ void dae::Application::CreateSyncObjects()
     }
 }
 
-void dae::Application::CleanupSwapchain()
+void dae::VulkanDemoApplication::CleanupSwapchain()
 {
     m_depthImage.Destroy(m_context);
     m_swapchain.Destroy(m_context);
 }
 
-void dae::Application::RecreateSwapchain()
+void dae::VulkanDemoApplication::RecreateSwapchain()
 {
     int width = 0, height = 0;
     while (width == 0 || height == 0)
@@ -552,7 +552,7 @@ void dae::Application::RecreateSwapchain()
     }
 }
 
-void dae::Application::RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
+void dae::VulkanDemoApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
 {
     commandBuffer.Begin();
 
@@ -603,7 +603,7 @@ void dae::Application::RecordRenderCommandBuffer(CommandBuffer& commandBuffer, u
     commandBuffer.End();
 }
 
-VkFormat dae::Application::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
+VkFormat dae::VulkanDemoApplication::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
 	VkFormatFeatureFlags features) const
 {
     for (VkFormat format : candidates)
@@ -624,7 +624,7 @@ VkFormat dae::Application::FindSupportedFormat(const std::vector<VkFormat>& cand
     throw std::runtime_error("failed to find supported format!");
 }
 
-VkFormat dae::Application::FindDepthFormat() const
+VkFormat dae::VulkanDemoApplication::FindDepthFormat() const
 {
     return FindSupportedFormat(
         { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
@@ -633,12 +633,12 @@ VkFormat dae::Application::FindDepthFormat() const
     );
 }
 
-bool dae::Application::HasStencilComponent(VkFormat format) const
+bool dae::VulkanDemoApplication::HasStencilComponent(VkFormat format) const
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void dae::Application::UpdateUniformBuffer(uint32_t currentImage) const
+void dae::VulkanDemoApplication::UpdateUniformBuffer(uint32_t currentImage) const
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
