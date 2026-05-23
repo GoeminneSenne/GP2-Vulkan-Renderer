@@ -289,10 +289,14 @@ void dae::VulkanDemoApplication::CreateTextureImage()
     Buffer stagingBuffer;
     BufferHelpers::CreateStaging(m_context, imageSize, stagingBuffer);
 
+    BufferHelpers::Upload(m_context, pixels, imageSize, stagingBuffer);
+
+    /*
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, pixels, static_cast<size_t>(imageSize));
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
+	*/
 
     stbi_image_free(pixels);
 
@@ -401,10 +405,14 @@ void dae::VulkanDemoApplication::CreateVertexBuffer()
     Buffer stagingBuffer;
     BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
 
+    BufferHelpers::Upload(m_context, vertices.data(), bufferSize, stagingBuffer);
+
+    /*
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
+	*/
 
     BufferHelpers::CreateVertex(m_context, bufferSize, m_vertexBuffer);
 	m_applicationDeletionQueue.PushDeletor([&]() {m_vertexBuffer.Destroy(m_context); });
@@ -425,10 +433,14 @@ void dae::VulkanDemoApplication::CreateIndexBuffer()
     Buffer stagingBuffer;
     BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
 
+    BufferHelpers::Upload(m_context, indices.data(), bufferSize, stagingBuffer);
+    /*
+     
     void* data;
     vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
     memcpy(data, indices.data(), (size_t)bufferSize);
     vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
+     */
 
 	BufferHelpers::CreateIndex(m_context, bufferSize, m_indexBuffer);
     m_applicationDeletionQueue.PushDeletor([&]() {m_indexBuffer.Destroy(m_context); });

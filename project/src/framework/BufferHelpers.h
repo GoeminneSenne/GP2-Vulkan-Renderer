@@ -59,7 +59,6 @@ namespace dae
 				buffer);
 		}
 
-
 		inline void CopyBuffer(const CommandBuffer& commandBuffer, const Buffer& srcBuffer, const Buffer& dstBuffer, VkDeviceSize size)
 		{
 			VkBufferCopy copyRegion{};
@@ -84,6 +83,15 @@ namespace dae
 
 			vkCmdCopyBufferToImage(commandBuffer.commandBuffer, buffer.buffer, image.image,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+		}
+
+		inline void Upload(const Context& context, const void* data, VkDeviceSize size, Buffer& buffer)
+		{
+			void* mapped;
+			vmaMapMemory(context.allocator, buffer.allocation, &mapped);
+			std::memcpy(mapped, data, static_cast<size_t>(size));
+			vmaUnmapMemory(context.allocator, buffer.allocation);
 
 		}
 	}

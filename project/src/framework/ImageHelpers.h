@@ -147,5 +147,6 @@ namespace dae
 
 			image.layout = newLayout;
 		}
+
 	}
 }
