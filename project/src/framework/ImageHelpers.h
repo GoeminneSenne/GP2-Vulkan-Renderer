@@ -4,6 +4,9 @@
 
 #include <vulkan/vulkan_core.h>
 
+#include "../../inc/stb_image.h"
+
+#include "BufferHelpers.h"
 #include "CommandBuffer.h"
 #include "Common.h"
 #include "Context.h"
@@ -116,7 +119,7 @@ namespace dae
 				1, &barrier);
 		}
 
-		inline void transitionImageLayout(const CommandBuffer& commandBuffer, Image& image, 
+		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image, 
 			VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
 			VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
 			VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -148,5 +151,53 @@ namespace dae
 			image.layout = newLayout;
 		}
 
+
+		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
+		{
+			int texWidth, texHeight, texChannels;
+			stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+			VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+			if (!pixels)
+				throw std::runtime_error("failed to load image: " + path);
+
+			Buffer stagingBuffer;
+			BufferHelpers::CreateStaging(context, imageSize, stagingBuffer);
+			BufferHelpers::Upload(context, pixels, imageSize, stagingBuffer);
+
+			stbi_image_free(pixels);
+
+			uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+			ImageBuilder imageBuilder = {};
+			imageBuilder
+				.SetWidth(texWidth)
+				.SetHeight(texHeight)
+				.SetMipLevels(mipLevels)
+				.SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
+				.SetTiling(VK_IMAGE_TILING_OPTIMAL)
+				.SetUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+				.SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+				.SetAllocUsage(VMA_MEMORY_USAGE_AUTO)
+				.SetAllocFlags(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT)
+				.Build(context, image);
+
+			CommandBuffer commandBuffer = context.commandPool.BeginSingleTimeCommand();
+			TransitionImageLayout(commandBuffer, image,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			context.commandPool.EndSingleTimeCommand(commandBuffer);
+
+			commandBuffer = context.commandPool.BeginSingleTimeCommand();
+			BufferHelpers::CopyBufferToImage(commandBuffer, stagingBuffer, image);
+			context.commandPool.EndSingleTimeCommand(commandBuffer);
+
+			stagingBuffer.Destroy(context);
+
+			commandBuffer = context.commandPool.BeginSingleTimeCommand();
+			GenerateMipmaps(commandBuffer, context, image);
+			context.commandPool.EndSingleTimeCommand(commandBuffer);
+		}
 	}
 }

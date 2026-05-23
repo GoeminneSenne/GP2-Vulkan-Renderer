@@ -1,7 +1,8 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
- 
+
+#include "Buffer.h"
 #include "CommandBuffer.h"
 #include "Context.h"
 

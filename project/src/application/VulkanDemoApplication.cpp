@@ -3,9 +3,6 @@
 #include <array>
 #include <chrono>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../../inc/stb_image.h"
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "../../inc/tiny_obj_loader.h"
 
@@ -21,8 +18,9 @@
 #include "../framework/Shader.h"
 #include "../framework/SwapchainHelpers.h"
 #include "../framework/Vertex.h"
-#include "../framework/BufferHelpers.h"
 #include "../framework/Framebuffer.h"
+#include "../framework/BufferHelpers.h"
+#include "../framework/ImageHelpers.h"
 
 
 void dae::VulkanDemoApplication::Init()
@@ -36,7 +34,10 @@ void dae::VulkanDemoApplication::Init()
 	CreateGraphicsPipeline();
 	CreateDepthResources();
 	SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
-	CreateTextureImage();
+
+	ImageHelpers::CreateTexture(m_context, TEXTURE_PATH, m_textureImage);
+    m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
+
 	CreateTextureSampler();
 	LoadModel();
 	CreateVertexBuffer();
@@ -269,70 +270,10 @@ void dae::VulkanDemoApplication::CreateDepthResources()
 
 
     CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    ImageHelpers::transitionImageLayout(commandBuffer, m_depthImage,
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_depthImage,
         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-}
-
-void dae::VulkanDemoApplication::CreateTextureImage()
-{
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight,
-        &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-    if (!pixels)
-        throw std::runtime_error("failed to load texture image!");
-
-    Buffer stagingBuffer;
-    BufferHelpers::CreateStaging(m_context, imageSize, stagingBuffer);
-
-    BufferHelpers::Upload(m_context, pixels, imageSize, stagingBuffer);
-
-    /*
-    void* data;
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-	*/
-
-    stbi_image_free(pixels);
-
-    uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-
-    ImageBuilder imageBuilder = {};
-    imageBuilder
-        .SetWidth(texWidth)
-        .SetHeight(texHeight)
-        .SetMipLevels(mipLevels)
-        .SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
-        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-        .SetUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO)
-        .SetAllocFlags(VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT)
-        .Build(m_context, m_textureImage);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
-
-
-    CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    ImageHelpers::transitionImageLayout(commandBuffer, m_textureImage,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-
-    commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    BufferHelpers::CopyBufferToImage(commandBuffer, stagingBuffer, m_textureImage);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-
-    stagingBuffer.Destroy(m_context);
-
-    commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    ImageHelpers::GenerateMipmaps(commandBuffer, m_context, m_textureImage);
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 }
 
@@ -404,15 +345,8 @@ void dae::VulkanDemoApplication::CreateVertexBuffer()
 
     Buffer stagingBuffer;
     BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
-
     BufferHelpers::Upload(m_context, vertices.data(), bufferSize, stagingBuffer);
 
-    /*
-    void* data;
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
-    memcpy(data, vertices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-	*/
 
     BufferHelpers::CreateVertex(m_context, bufferSize, m_vertexBuffer);
 	m_applicationDeletionQueue.PushDeletor([&]() {m_vertexBuffer.Destroy(m_context); });
@@ -432,15 +366,7 @@ void dae::VulkanDemoApplication::CreateIndexBuffer()
 
     Buffer stagingBuffer;
     BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
-
     BufferHelpers::Upload(m_context, indices.data(), bufferSize, stagingBuffer);
-    /*
-     
-    void* data;
-    vmaMapMemory(m_context.allocator, stagingBuffer.allocation, &data);
-    memcpy(data, indices.data(), (size_t)bufferSize);
-    vmaUnmapMemory(m_context.allocator, stagingBuffer.allocation);
-     */
 
 	BufferHelpers::CreateIndex(m_context, bufferSize, m_indexBuffer);
     m_applicationDeletionQueue.PushDeletor([&]() {m_indexBuffer.Destroy(m_context); });

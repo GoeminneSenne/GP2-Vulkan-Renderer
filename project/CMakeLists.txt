@@ -20,7 +20,7 @@ set(SOURCES
 	src/framework/GraphicsPipeline.cpp
 	src/framework/SwapchainSupportDetails.cpp
 	src/framework/Framebuffer.cpp
-)
+ "src/stb_image.cpp")
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})

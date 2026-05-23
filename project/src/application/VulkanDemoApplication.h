@@ -69,7 +69,7 @@ namespace dae
         void CreateDescriptorSetLayout();
         void CreateGraphicsPipeline();
         void CreateDepthResources();
-        void CreateTextureImage();
+        //void CreateTextureImage();
         void CreateTextureSampler();
         void LoadModel();
         void CreateVertexBuffer();
