@@ -19,7 +19,6 @@
 #include "../framework/SwapchainHelpers.h"
 #include "../framework/Vertex.h"
 #include "../framework/Framebuffer.h"
-#include "../framework/BufferHelpers.h"
 #include "../framework/ImageHelpers.h"
 
 
@@ -344,17 +343,16 @@ void dae::VulkanDemoApplication::CreateVertexBuffer()
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     Buffer stagingBuffer;
-    BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
-    BufferHelpers::Upload(m_context, vertices.data(), bufferSize, stagingBuffer);
+    stagingBuffer.CreateStaging(m_context, bufferSize);
+    stagingBuffer.UploadData(m_context, vertices.data(), bufferSize);
 
-
-    BufferHelpers::CreateVertex(m_context, bufferSize, m_vertexBuffer);
+    m_vertexBuffer.CreateVertex(m_context, bufferSize);
 	m_applicationDeletionQueue.PushDeletor([&]() {m_vertexBuffer.Destroy(m_context); });
 
 
 
     CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_vertexBuffer, bufferSize);
+    m_vertexBuffer.RecordCopyFrom(commandBuffer, stagingBuffer, bufferSize);
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
     stagingBuffer.Destroy(m_context);
@@ -365,15 +363,15 @@ void dae::VulkanDemoApplication::CreateIndexBuffer()
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     Buffer stagingBuffer;
-    BufferHelpers::CreateStaging(m_context, bufferSize, stagingBuffer);
-    BufferHelpers::Upload(m_context, indices.data(), bufferSize, stagingBuffer);
+    stagingBuffer.CreateStaging(m_context, bufferSize);
+    stagingBuffer.UploadData(m_context, indices.data(), bufferSize);
 
-	BufferHelpers::CreateIndex(m_context, bufferSize, m_indexBuffer);
+    m_indexBuffer.CreateIndex(m_context, bufferSize);
     m_applicationDeletionQueue.PushDeletor([&]() {m_indexBuffer.Destroy(m_context); });
 
 
     CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    BufferHelpers::CopyBuffer(commandBuffer, stagingBuffer, m_indexBuffer, bufferSize);
+    m_indexBuffer.RecordCopyFrom(commandBuffer, stagingBuffer, bufferSize);
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
 
     stagingBuffer.Destroy(m_context);
@@ -387,7 +385,7 @@ void dae::VulkanDemoApplication::CreateUniformBuffers()
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
         VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        BufferHelpers::CreateUniform(m_context, bufferSize, m_uniformBuffers[i]);
+        m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
 
         vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
     }
@@ -512,11 +510,11 @@ void dae::VulkanDemoApplication::RecordRenderCommandBuffer(CommandBuffer& comman
     scissor.extent = m_swapchain.extent;
     vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
 
-    VkBuffer vertexBuffers[] = { m_vertexBuffer.buffer };
+    VkBuffer vertexBuffers[] = { m_vertexBuffer.handle };
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(commandBuffer.commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(commandBuffer.commandBuffer, m_indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer.commandBuffer, m_indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
 
@@ -571,7 +569,7 @@ void dae::VulkanDemoApplication::UpdateUniformBuffer(uint32_t currentImage) cons
 
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.view = glm::lookAt(glm::vec3(2.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+    ubo.view = glm::lookAt(glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.proj = glm::perspective(glm::radians(45.0f), (float)m_swapchain.extent.width / (float)m_swapchain.extent.height, 0.1f, 10.f);
     ubo.proj[1][1] *= -1;
 

@@ -6,7 +6,7 @@
 
 #include "../../inc/stb_image.h"
 
-#include "BufferHelpers.h"
+#include "Buffer.h"
 #include "CommandBuffer.h"
 #include "Common.h"
 #include "Context.h"
@@ -151,6 +151,25 @@ namespace dae
 			image.layout = newLayout;
 		}
 
+		inline void RecordCopyFromBuffer(const CommandBuffer& commandBuffer, const Buffer& source, const Image& image)
+		{
+			VkBufferImageCopy region{};
+			region.bufferOffset = 0;
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = 0;
+			region.imageSubresource.layerCount = 1;
+
+			region.imageOffset = { 0, 0, 0 };
+			region.imageExtent = { image.extent.width, image.extent.height, 1 };
+
+			vkCmdCopyBufferToImage(commandBuffer.commandBuffer, source.handle, image.image,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		}
+
 
 		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
 		{
@@ -162,8 +181,8 @@ namespace dae
 				throw std::runtime_error("failed to load image: " + path);
 
 			Buffer stagingBuffer;
-			BufferHelpers::CreateStaging(context, imageSize, stagingBuffer);
-			BufferHelpers::Upload(context, pixels, imageSize, stagingBuffer);
+			stagingBuffer.CreateStaging(context, imageSize);
+			stagingBuffer.UploadData(context, pixels, imageSize);
 
 			stbi_image_free(pixels);
 
@@ -190,7 +209,7 @@ namespace dae
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
 			commandBuffer = context.commandPool.BeginSingleTimeCommand();
-			BufferHelpers::CopyBufferToImage(commandBuffer, stagingBuffer, image);
+			RecordCopyFromBuffer(commandBuffer, stagingBuffer, image);
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
 			stagingBuffer.Destroy(context);

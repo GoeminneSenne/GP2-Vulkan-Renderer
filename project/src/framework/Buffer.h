@@ -9,16 +9,21 @@ namespace dae
 	struct Buffer final
 	{
 		//TODO allocationInfo als member toevoegen?
-		VkBuffer buffer = VK_NULL_HANDLE;
+		VkBuffer handle = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
 		VkDeviceSize size = 0;
 
-		void Destroy(const Context& context) const
-		{
-			if (buffer != VK_NULL_HANDLE && allocation != nullptr)
-			{
-				vmaDestroyBuffer(context.allocator, buffer, allocation);
-			}
-		}
+
+		void Create(const Context& context, VkDeviceSize size, VkBufferUsageFlags usage,
+			VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags allocFlags);
+		void Destroy(const Context& context) const;
+
+		void CreateStaging(const Context& context, VkDeviceSize size);
+		void CreateVertex(const Context& context, VkDeviceSize size);
+		void CreateIndex(const Context& context, VkDeviceSize size);
+		void CreateUniform(const Context& context, VkDeviceSize size);
+
+		void RecordCopyFrom(const CommandBuffer& commandBuffer, const Buffer& source, VkDeviceSize size);
+		void UploadData(const Context& context, const void* data, VkDeviceSize size);
 	};
 }

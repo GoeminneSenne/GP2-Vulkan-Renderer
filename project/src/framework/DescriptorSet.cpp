@@ -21,7 +21,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteBuffer(uint32_t binding
 	VkDeviceSize range)
 {
 	m_bufferInfo = {};
-	m_bufferInfo.buffer = buffer.buffer;
+	m_bufferInfo.buffer = buffer.handle;
 	m_bufferInfo.offset = offset;
 	m_bufferInfo.range = range;
 
