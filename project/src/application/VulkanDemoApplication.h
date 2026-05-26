@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
+#include <memory>
 #include <glm/gtx/hash.hpp>
 
 #include "../framework/Window.h"
@@ -23,6 +24,7 @@
 #include "../framework/RenderPass.h"
 #include "../framework/GraphicsPipeline.h"
 #include "../framework/PipelineLayout.h"
+#include "../framework/Mesh.h"
 #include "../framework/SwapchainSupportDetails.h"
 
 constexpr static uint32_t WIDTH = 800;
@@ -69,11 +71,10 @@ namespace dae
         void CreateDescriptorSetLayout();
         void CreateGraphicsPipeline();
         void CreateDepthResources();
-        //void CreateTextureImage();
         void CreateTextureSampler();
-        void LoadModel();
-        void CreateVertexBuffer();
-        void CreateIndexBuffer();
+        //void LoadModel();
+        //void CreateVertexBuffer();
+        //void CreateIndexBuffer();
         void CreateUniformBuffers();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
@@ -107,10 +108,11 @@ namespace dae
         std::vector<Fence> m_inFlightFences;
         uint32_t currentFrame = 0;
 
-        std::vector<Vertex> vertices;
-        std::vector<uint32_t> indices;
-        Buffer m_vertexBuffer{};
-        Buffer m_indexBuffer{};
+        //std::vector<Vertex> vertices;
+        //std::vector<uint32_t> indices;
+        //Buffer m_vertexBuffer{};
+        //Buffer m_indexBuffer{};
+        std::unique_ptr<Mesh> m_pMesh;
 
         std::vector<Buffer> m_uniformBuffers;
         std::vector<void*> uniformBuffersMapped;

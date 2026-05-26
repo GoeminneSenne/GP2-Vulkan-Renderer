@@ -21,6 +21,7 @@ set(SOURCES
 	src/framework/SwapchainSupportDetails.cpp
 	src/framework/Framebuffer.cpp
 	src/framework/Buffer.cpp
+	src/framework/Mesh.cpp
 	src/stb_image.cpp)
 
 #Create executable

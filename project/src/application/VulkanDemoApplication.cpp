@@ -3,7 +3,6 @@
 #include <array>
 #include <chrono>
 
-#define TINYOBJLOADER_IMPLEMENTATION
 #include "../../inc/tiny_obj_loader.h"
 
 //VMA includes
@@ -38,9 +37,11 @@ void dae::VulkanDemoApplication::Init()
     m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
 
 	CreateTextureSampler();
-	LoadModel();
-	CreateVertexBuffer();
-	CreateIndexBuffer();
+
+    m_pMesh = std::make_unique<Mesh>();
+    m_pMesh->LoadObj(m_context, MODEL_PATH);
+    m_applicationDeletionQueue.PushDeletor([&]() {m_pMesh->Destroy(m_context); });
+
 	CreateUniformBuffers();
 	CreateDescriptorPool();
 	CreateDescriptorSets();
@@ -294,89 +295,6 @@ void dae::VulkanDemoApplication::CreateTextureSampler()
 
 }
 
-void dae::VulkanDemoApplication::LoadModel()
-{
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string err;
-
-    std::unordered_map<Vertex, uint32_t> uniqueVertices{};
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
-    {
-        throw std::runtime_error(err);
-    }
-
-    for (const auto& shape : shapes)
-    {
-        for (const auto& index : shape.mesh.indices)
-        {
-            Vertex vertex{};
-
-            vertex.pos = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            vertex.color = { 1.f, 1.f, 1.f };
-
-            if (!uniqueVertices.contains(vertex))
-            {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
-            }
-
-            indices.push_back(uniqueVertices[vertex]);
-        }
-    }
-}
-
-void dae::VulkanDemoApplication::CreateVertexBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-    Buffer stagingBuffer;
-    stagingBuffer.CreateStaging(m_context, bufferSize);
-    stagingBuffer.UploadData(m_context, vertices.data(), bufferSize);
-
-    m_vertexBuffer.CreateVertex(m_context, bufferSize);
-	m_applicationDeletionQueue.PushDeletor([&]() {m_vertexBuffer.Destroy(m_context); });
-
-
-
-    CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    m_vertexBuffer.RecordCopyFrom(commandBuffer, stagingBuffer, bufferSize);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-
-    stagingBuffer.Destroy(m_context);
-}
-
-void dae::VulkanDemoApplication::CreateIndexBuffer()
-{
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-    Buffer stagingBuffer;
-    stagingBuffer.CreateStaging(m_context, bufferSize);
-    stagingBuffer.UploadData(m_context, indices.data(), bufferSize);
-
-    m_indexBuffer.CreateIndex(m_context, bufferSize);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_indexBuffer.Destroy(m_context); });
-
-
-    CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    m_indexBuffer.RecordCopyFrom(commandBuffer, stagingBuffer, bufferSize);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-
-    stagingBuffer.Destroy(m_context);
-}
-
 void dae::VulkanDemoApplication::CreateUniformBuffers()
 {
     m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -509,16 +427,10 @@ void dae::VulkanDemoApplication::RecordRenderCommandBuffer(CommandBuffer& comman
     scissor.offset = { 0,0 };
     scissor.extent = m_swapchain.extent;
     vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
+    
+	vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
 
-    VkBuffer vertexBuffers[] = { m_vertexBuffer.handle };
-    VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(commandBuffer.commandBuffer, 0, 1, vertexBuffers, offsets);
-
-    vkCmdBindIndexBuffer(commandBuffer.commandBuffer, m_indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
-
-    vkCmdDrawIndexed(commandBuffer.commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+    m_pMesh->RecordDraw(commandBuffer);
 
     vkCmdEndRenderPass(commandBuffer.commandBuffer);
 
