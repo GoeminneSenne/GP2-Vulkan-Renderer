@@ -15,32 +15,173 @@
 
 void dae::VulkanDemoApplication::Init()
 {
-    CreateWindow();
-	CreateContext();
-	m_swapchain.Create(m_window, m_context);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context); });
-	CreateRenderPass();
-	CreateDescriptorSetLayout();
-	CreateGraphicsPipeline();
-	CreateDepthResources();
-	SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
+    // --- Window -----------------------------------
+	{
+        m_window.InitWindow(WIDTH, HEIGHT, "Vulkan Demo");
+        m_applicationDeletionQueue.PushDeletor([&]() {m_window.Destroy(); });
+	}
+    // --- Context ----------------------------------
+	{
+        ContextConfig config{
+			ENABLE_VALIDATION,
+			validationLayers,
+			{},
+			deviceExtensions
+        };
 
-	ImageHelpers::CreateTexture(m_context, TEXTURE_PATH, m_textureImage);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
+        ContextFactory contextFactory{ config };
+        contextFactory.Create(&m_window, m_context);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
+	}
+    // --- Swapchain ----------------------------------
+    {
+        m_swapchain.Create(m_window, m_context);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context); });
+    }
+    // --- RenderPass -------------------------------
+	{
+        RenderPassBuilder renderPassBuilder = {};
+        renderPassBuilder
+            .AddColorAttachment(m_swapchain.imageFormat)
+            .SetDepthAttachment(FindDepthFormat())
+            .Build(m_context, m_renderPass);
 
-	CreateTextureSampler();
+        m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
+	}
+    // --- DescriptorSetLayout ----------------------
+	{
+        DescriptorSetLayoutBuilder layoutBuilder{};
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+            .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .Build(m_context, m_descriptorSetLayout);
 
-    m_pMesh = std::make_unique<Mesh>();
-    m_pMesh->LoadObj(m_context, MODEL_PATH);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_pMesh->Destroy(m_context); });
+        m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorSetLayout.Destroy(m_context); });
 
-	CreateUniformBuffers();
-	CreateDescriptorPool();
-	CreateDescriptorSets();
+	}
+	// --- Graphics Pipeline ------------------------
+	{
+        Shader vertexShader, fragmentShader;
+
+        ShaderLoader shaderLoader = {};
+        shaderLoader
+            .SetFilename("resources/shaders/base_shader.vert.spv")
+            .Load(m_context, vertexShader);
+
+        shaderLoader
+            .SetFilename("resources/shaders/base_shader.frag.spv")
+            .Load(m_context, fragmentShader);
+
+        GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
+        pipelineLayoutBuilder
+            .AddDescriptorSetLayout(m_descriptorSetLayout)
+            .Build(m_context, m_graphicsPipelineLayout);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
+
+
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_graphicsPipelineLayout)
+            .SetRenderPass(m_renderPass)
+            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
+            .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
+            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
+            .Build(m_context, m_graphicsPipeline);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipeline.Destroy(m_context); });
+
+
+        fragmentShader.Destroy(m_context);
+        vertexShader.Destroy(m_context);
+
+	}
+	// --- Depth Resources --------------------------
+	{
+		CreateDepthResources();
+		
+	}
+	// --- Framebuffers ------------------------------
+	{
+        SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
+	}
+	// --- Texture Sampler --------------------------
+	{
+        SamplerBuilder samplerBuilder = {};
+        samplerBuilder
+            .SetFilter(VK_FILTER_LINEAR)
+            .SetAddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+            .EnableAnisotropy(true)
+            .EnableCompare(false)
+            .SetMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
+            .SetMipLodBias(0.f)
+            .SetMinLod(0.f)
+            .SetMaxLod(VK_LOD_CLAMP_NONE)
+            .Build(m_context, m_sampler);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_sampler.Destroy(m_context); });
+	}
+
+	// --- Scene Data -------------------------------
+	{
+        ImageHelpers::CreateTexture(m_context, TEXTURE_PATH, m_textureImage);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
+
+        m_pMesh = std::make_unique<Mesh>();
+        m_pMesh->LoadObj(m_context, MODEL_PATH);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_pMesh->Destroy(m_context); });
+		
+	}
+	// --- Uniform Buffers --------------------------
+	{
+        m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+            m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
+
+            vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
+        }
+	}
+	// --- Descriptor Pool --------------------------
+	{
+        std::vector<VkDescriptorPoolSize> poolSizes;
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+
+        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
+	}
+
+	// --- Descriptor Sets --------------------------
+	{
+        m_descriptorSets = m_descriptorPool.Allocate(m_context, m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            DescriptorSetWriter writer = {};
+            writer
+                .SetTarget(&m_descriptorSets[i])
+                .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
+                .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
+                .UpdateTarget(m_context);
+        }
+	}
+
+	// --- Sync Manager -----------------------------
+	{
+	    m_syncManager.Create(m_context, m_swapchain.images.size());
+        m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
+	}
+	    
 	m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
-	
-	m_syncManager.Create(m_context, m_swapchain.images.size());
-    m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
 }
 
 bool dae::VulkanDemoApplication::ShouldClose() const
@@ -57,6 +198,7 @@ void dae::VulkanDemoApplication::DrawFrame()
 {
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
 
+    // --- Wait for + acquire fence --------------------------
     const Fence* inFlightFence = m_syncManager.GetInFlightFence(currentFrame);
     const Semaphore* imageAvailableSemaphore = m_syncManager.GetImageAvailableSemaphore(currentFrame);
 
@@ -78,11 +220,12 @@ void dae::VulkanDemoApplication::DrawFrame()
     inFlightFence->Reset(m_context);
 
     ///Record
+	// --- Record --------------------------
     vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
     RecordRenderCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
 
-    ///Submit
-    VkSubmitInfo submitInfo{};
+    // --- Submit --------------------------
+	VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[] = { imageAvailableSemaphore->GetHandle() };
@@ -103,7 +246,7 @@ void dae::VulkanDemoApplication::DrawFrame()
 
     m_context.logicalDevice.graphicsQueue.Submit(submitInfo, *inFlightFence);
 
-    ///Present
+    // --- Present --------------------------
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -141,90 +284,6 @@ void dae::VulkanDemoApplication::Cleanup()
     m_applicationDeletionQueue.Flush();
 }
 
-void dae::VulkanDemoApplication::CreateWindow()
-{
-    m_window.InitWindow(WIDTH, HEIGHT, "Vulkan Demo");
-    m_applicationDeletionQueue.PushDeletor([&]() {m_window.Destroy(); });
-}
-
-void dae::VulkanDemoApplication::CreateContext()
-{
-    ContextConfig config{
-        enableValidationLayers,
-        validationLayers,
-        {},
-        deviceExtensions
-    };
-
-    ContextFactory contextFactory{ config };
-    contextFactory.Create(&m_window, m_context);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
-}
-
-void dae::VulkanDemoApplication::CreateRenderPass()
-{
-    RenderPassBuilder renderPassBuilder = {};
-    renderPassBuilder
-        .AddColorAttachment(m_swapchain.imageFormat)
-        .SetDepthAttachment(FindDepthFormat())
-        .Build(m_context, m_renderPass);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
-}
-
-void dae::VulkanDemoApplication::CreateDescriptorSetLayout()
-{
-    DescriptorSetLayoutBuilder layoutBuilder{};
-    layoutBuilder
-        .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .Build(m_context, m_descriptorSetLayout);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorSetLayout.Destroy(m_context); });
-
-}
-
-void dae::VulkanDemoApplication::CreateGraphicsPipeline()
-{
-    Shader vertexShader, fragmentShader;
-
-    ShaderLoader shaderLoader = {};
-    shaderLoader
-        .SetFilename("resources/shaders/base_shader.vert.spv")
-        .Load(m_context, vertexShader);
-
-    shaderLoader
-        .SetFilename("resources/shaders/base_shader.frag.spv")
-        .Load(m_context, fragmentShader);
-
-    GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
-    pipelineLayoutBuilder
-        .AddDescriptorSetLayout(m_descriptorSetLayout)
-        .Build(m_context, m_graphicsPipelineLayout);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
-
-
-    GraphicsPipelineBuilder pipelineBuilder = {};
-    pipelineBuilder
-        .SetPipelineLayout(m_graphicsPipelineLayout)
-        .SetRenderPass(m_renderPass)
-        .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-        .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-        .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-        .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-        .SetPolygonMode(VK_POLYGON_MODE_FILL)
-        .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
-        .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
-        .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-        .Build(m_context, m_graphicsPipeline);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipeline.Destroy(m_context); });
-
-
-    fragmentShader.Destroy(m_context);
-    vertexShader.Destroy(m_context);
-}
 
 void dae::VulkanDemoApplication::CreateDepthResources()
 {
@@ -258,63 +317,6 @@ void dae::VulkanDemoApplication::CreateDepthResources()
         0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
         VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-}
-
-void dae::VulkanDemoApplication::CreateTextureSampler()
-{
-    SamplerBuilder samplerBuilder = {};
-    samplerBuilder
-        .SetFilter(VK_FILTER_LINEAR)
-        .SetAddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-        .EnableAnisotropy(true)
-        .EnableCompare(false)
-        .SetMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
-        .SetMipLodBias(0.f)
-        .SetMinLod(0.f)
-        .SetMaxLod(VK_LOD_CLAMP_NONE)
-        .Build(m_context, m_sampler);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_sampler.Destroy(m_context); });
-
-}
-
-void dae::VulkanDemoApplication::CreateUniformBuffers()
-{
-    m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-    uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-        m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
-
-        vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
-    }
-}
-
-void dae::VulkanDemoApplication::CreateDescriptorPool()
-{
-    std::vector<VkDescriptorPoolSize> poolSizes;
-    poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-    poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-
-    m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
-}
-
-void dae::VulkanDemoApplication::CreateDescriptorSets()
-{
-    m_descriptorSets = m_descriptorPool.Allocate(m_context, m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        DescriptorSetWriter writer = {};
-        writer
-            .SetTarget(&m_descriptorSets[i])
-            .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
-            .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
-            .UpdateTarget(m_context);
-    }
 }
 
 void dae::VulkanDemoApplication::CleanupSwapchain()

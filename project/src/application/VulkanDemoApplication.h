@@ -35,13 +35,6 @@ const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" }
 
 const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-#ifdef NDEBUG
-constexpr static bool enableValidationLayers = false;
-#else
-constexpr static bool enableValidationLayers = true;
-#endif
-
-
 struct UniformBufferObject
 {
     alignas(16) glm::mat4 model;
@@ -61,16 +54,16 @@ namespace dae
 		void Cleanup();
 
 	private:
-        void CreateWindow();
-        void CreateContext();
-        void CreateRenderPass();
-        void CreateDescriptorSetLayout();
-        void CreateGraphicsPipeline();
+        //void CreateWindow();
+        //void CreateContext();
+        //void CreateRenderPass();
+        //void CreateDescriptorSetLayout();
+        //void CreateGraphicsPipeline();
         void CreateDepthResources();
-        void CreateTextureSampler();
-        void CreateUniformBuffers();
-        void CreateDescriptorPool();
-        void CreateDescriptorSets();
+        //void CreateTextureSampler();
+        //void CreateUniformBuffers();
+        //void CreateDescriptorPool();
+        //void CreateDescriptorSets();
 
         void CleanupSwapchain();
         void RecreateSwapchain();
