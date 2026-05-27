@@ -158,11 +158,7 @@ void dae::VulkanDemoApplication::CreateContext()
 
     ContextFactory contextFactory{ config };
     contextFactory.Create(&m_window, m_context);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_context.instance.Destroy(); });
-    m_applicationDeletionQueue.PushDeletor([&]() {m_context.logicalDevice.Destroy(); });
-    m_applicationDeletionQueue.PushDeletor([&]() {m_context.commandPool.Destroy(); });
-    m_applicationDeletionQueue.PushDeletor([&]() {vmaDestroyAllocator(m_context.allocator); });
+    m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
 }
 
 void dae::VulkanDemoApplication::CreateRenderPass()

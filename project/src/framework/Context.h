@@ -19,6 +19,8 @@ namespace dae
 		LogicalDevice logicalDevice{};
 		CommandPool commandPool{};
 		VmaAllocator allocator{};
+
+		void Destroy();
 	};
 
 	struct ContextConfig final

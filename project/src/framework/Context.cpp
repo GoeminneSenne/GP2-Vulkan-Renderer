@@ -11,6 +11,18 @@
 #define VMA_DEBUG_LOG_FORMAT
 #include <vk_mem_alloc.h>
 
+void dae::Context::Destroy()
+{
+	if (allocator != nullptr)
+	{
+		vmaDestroyAllocator(allocator);
+	}
+
+	commandPool.Destroy();
+	logicalDevice.Destroy();
+	instance.Destroy();
+}
+
 dae::ContextFactory::ContextFactory(ContextConfig config)
 	: m_config{std::move(config)}
 {}
