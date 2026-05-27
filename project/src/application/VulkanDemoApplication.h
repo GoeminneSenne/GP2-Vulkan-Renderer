@@ -51,6 +51,7 @@ namespace dae
 		void Init();
 		bool ShouldClose() const;
 		void PollEvents() const;
+        void Update();
 		void DrawFrame();
 		void Cleanup();
 

@@ -12,6 +12,7 @@ int main() {
         while (!app.ShouldClose())
         {
             app.PollEvents();
+            app.Update();
             app.DrawFrame();
         }
 
