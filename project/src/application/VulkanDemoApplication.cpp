@@ -3,14 +3,6 @@
 #include <array>
 #include <chrono>
 
-#include "../../inc/tiny_obj_loader.h"
-
-//VMA includes
-#define VMA_IMPLEMENTATION
-#define VMA_STATS_STRING_ENABLED 1
-#define VMA_DEBUG_LOG_FORMAT
-#include <vk_mem_alloc.h>
-
 #include "../framework/DescriptorSet.h"
 #include "../framework/Sampler.h"
 #include "../framework/RenderPass.h"
@@ -46,7 +38,9 @@ void dae::VulkanDemoApplication::Init()
 	CreateDescriptorPool();
 	CreateDescriptorSets();
 	m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
-	CreateSyncObjects();
+	
+	m_syncManager.Create(m_context, m_swapchain.images.size());
+    m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
 }
 
 bool dae::VulkanDemoApplication::ShouldClose() const
@@ -61,10 +55,15 @@ void dae::VulkanDemoApplication::PollEvents() const
 
 void dae::VulkanDemoApplication::DrawFrame()
 {
-    m_inFlightFences[currentFrame].Wait(m_context);
+    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
+
+    const Fence* inFlightFence = m_syncManager.GetInFlightFence(currentFrame);
+    const Semaphore* imageAvailableSemaphore = m_syncManager.GetImageAvailableSemaphore(currentFrame);
+
+    inFlightFence->Wait(m_context);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(m_context.logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrame].Get(), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(m_context.logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, imageAvailableSemaphore->GetHandle(), VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -76,7 +75,7 @@ void dae::VulkanDemoApplication::DrawFrame()
 
     UpdateUniformBuffer(currentFrame);
 
-    m_inFlightFences[currentFrame].Reset(m_context);
+    inFlightFence->Reset(m_context);
 
     ///Record
     vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
@@ -86,7 +85,7 @@ void dae::VulkanDemoApplication::DrawFrame()
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[currentFrame].Get() };
+    VkSemaphore waitSemaphores[] = { imageAvailableSemaphore->GetHandle() };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -95,11 +94,14 @@ void dae::VulkanDemoApplication::DrawFrame()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].commandBuffer;
 
-    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[imageIndex].Get() };
+    //Get semaphore using imageIndex instead of currentFrame!
+    const Semaphore* renderFinishedSemaphore = m_syncManager.GetRenderFinishedSemaphore(imageIndex);
+
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphore->GetHandle() };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    m_context.logicalDevice.graphicsQueue.Submit(submitInfo, m_inFlightFences[currentFrame]);
+    m_context.logicalDevice.graphicsQueue.Submit(submitInfo, *inFlightFence);
 
     ///Present
     VkPresentInfoKHR presentInfo{};
@@ -122,9 +124,8 @@ void dae::VulkanDemoApplication::DrawFrame()
     }
     else if (result != VK_SUCCESS)
         throw std::runtime_error("failed to present swap chain images!");
-
-    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
+	
+    m_syncManager.NextFrame();
 }
 
 void dae::VulkanDemoApplication::Cleanup()
@@ -135,20 +136,6 @@ void dae::VulkanDemoApplication::Cleanup()
     {
         vmaUnmapMemory(m_context.allocator, m_uniformBuffers[i].allocation);
         m_uniformBuffers[i].Destroy(m_context);
-    }
-
-    m_descriptorPool.Destroy(m_context);
-
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        m_imageAvailableSemaphores[i].Destroy(m_context);
-        m_inFlightFences[i].Destroy(m_context);
-    }
-
-    for (const auto& semaphore : m_renderFinishedSemaphores)
-    {
-        semaphore.Destroy(m_context);
     }
 
     m_applicationDeletionQueue.Flush();
@@ -316,6 +303,7 @@ void dae::VulkanDemoApplication::CreateDescriptorPool()
     poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
 
     m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
+    m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
 }
 
 void dae::VulkanDemoApplication::CreateDescriptorSets()
@@ -330,32 +318,6 @@ void dae::VulkanDemoApplication::CreateDescriptorSets()
             .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
             .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
             .UpdateTarget(m_context);
-    }
-}
-
-void dae::VulkanDemoApplication::CreateSyncObjects()
-{
-    m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
-    m_renderFinishedSemaphores.resize(m_swapchain.images.size());
-
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        m_imageAvailableSemaphores[i].Create(m_context);
-        m_inFlightFences[i].Create(m_context);
-    }
-
-    for (size_t i = 0; i < m_swapchain.images.size(); ++i)
-    {
-        m_renderFinishedSemaphores[i].Create(m_context);
     }
 }
 
@@ -382,14 +344,7 @@ void dae::VulkanDemoApplication::RecreateSwapchain()
     CreateDepthResources();
     SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
 
-
-    //Semaphore reconstruction
-    //TODO: should be in seperate function or handled elsewhere??
-    for (auto& semaphore : m_renderFinishedSemaphores)
-    {
-        semaphore.Destroy(m_context);
-        semaphore.Create(m_context);
-    }
+	//Todo add RenderFinishedSemaphores reconstruction in SyncManager
 }
 
 void dae::VulkanDemoApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
@@ -428,6 +383,7 @@ void dae::VulkanDemoApplication::RecordRenderCommandBuffer(CommandBuffer& comman
     scissor.extent = m_swapchain.extent;
     vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
     
+    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
 	vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
 
     m_pMesh->RecordDraw(commandBuffer);

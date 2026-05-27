@@ -5,6 +5,12 @@
 #include "Window.h"
 #include "GLFW/glfw3.h"
 
+//VMA includes
+#define VMA_IMPLEMENTATION
+#define VMA_STATS_STRING_ENABLED 1
+#define VMA_DEBUG_LOG_FORMAT
+#include <vk_mem_alloc.h>
+
 dae::ContextFactory::ContextFactory(ContextConfig config)
 	: m_config{std::move(config)}
 {}

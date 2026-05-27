@@ -21,7 +21,7 @@ void dae::Semaphore::Destroy(const Context& context) const
 	vkDestroySemaphore(context.logicalDevice.device, m_semaphore, nullptr);
 }
 
-VkSemaphore dae::Semaphore::Get() const
+VkSemaphore dae::Semaphore::GetHandle() const
 {
 	return m_semaphore;
 }

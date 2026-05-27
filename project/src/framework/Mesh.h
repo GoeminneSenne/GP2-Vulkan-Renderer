@@ -6,16 +6,18 @@ namespace dae
 {
 	struct Context;
 
-	struct Mesh final
+	class Mesh final
 	{
-		Buffer vertexBuffer{};
-		Buffer indexBuffer{};
-		std::uint32_t vertexCount = 0;
-		std::uint32_t indexCount = 0;
-
+	public:
 		void LoadObj(const Context& context, const std::string& path);
 		void Destroy(const Context& context);
 
 		void RecordDraw(const CommandBuffer& command) const;
+
+	private:
+		Buffer vertexBuffer{};
+		Buffer indexBuffer{};
+		std::uint32_t vertexCount = 0;
+		std::uint32_t indexCount = 0;
 	};
 }

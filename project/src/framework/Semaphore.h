@@ -12,7 +12,7 @@ namespace dae
 		void Create(const Context& context);
 		void Destroy(const Context& context) const;
 		
-		VkSemaphore Get() const;
+		VkSemaphore GetHandle() const;
 
 	private:
 		VkSemaphore m_semaphore = VK_NULL_HANDLE;
