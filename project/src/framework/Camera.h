@@ -24,6 +24,22 @@ namespace dae
 		float totalPitch{};
 		float totalYaw{};
 
+		float nearPlane{ 1.f };
+		float farPlane{ 1000.f };
+
+		glm::mat4 projectionMatrix{};
+
+		void Initialize(float _fovAngle = 90.f, const glm::vec3& _origin = { 0.f, 0.f, 0.f }, float _nearPlane = 1.f, float _farPlane = 1000.f)
+		{
+			fovAngle = _fovAngle;
+			fov = glm::tan(glm::radians(fovAngle) / 2.f);
+
+			origin = _origin;
+
+			nearPlane = _nearPlane;
+			farPlane = _farPlane;
+		}
+
 		//TODO: aanpassen zodat matrices toch members zijn van Camera, niet alleen functions
 		glm::mat4 CalculateViewMatrix() const
 		{
@@ -41,6 +57,14 @@ namespace dae
 			glm::quat pitchRotation = glm::angleAxis(totalPitch, glm::vec3(1, 0, 0));
 
 			return glm::toMat4(yawRotation * pitchRotation);
+		}
+
+		glm::mat4 CalculateProjectionMatrix(uint32_t width, uint32_t height)
+		{
+			projectionMatrix = glm::perspective(fov, static_cast<float>(width) / static_cast<float>(height), nearPlane, farPlane);
+			projectionMatrix[1][1] *= -1;
+
+			return projectionMatrix;
 		}
 
 		//TODO add timer for frame independent movement

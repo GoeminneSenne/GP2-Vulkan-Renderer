@@ -181,6 +181,12 @@ void dae::VulkanDemoApplication::Init()
         m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
 	}
 	    
+	// --- Camera -----------------------------
+	{
+        m_camera.Initialize(90.f, { 0.f, -2.f, 0.f }, 0.1f, 10.f);
+        m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
+	}
+
 	m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
 }
 
@@ -436,8 +442,9 @@ void dae::VulkanDemoApplication::UpdateUniformBuffer(uint32_t currentImage)
     UniformBufferObject ubo{};
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
     ubo.view = m_camera.CalculateViewMatrix();
-	ubo.proj = glm::perspective(glm::radians(45.0f), (float)m_swapchain.extent.width / (float)m_swapchain.extent.height, 0.1f, 10.f);
-    ubo.proj[1][1] *= -1;
+	//ubo.proj = glm::perspective(glm::radians(45.0f), (float)m_swapchain.extent.width / (float)m_swapchain.extent.height, 0.1f, 10.f);
+    //ubo.proj[1][1] *= -1;
+    ubo.proj = m_camera.projectionMatrix;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }

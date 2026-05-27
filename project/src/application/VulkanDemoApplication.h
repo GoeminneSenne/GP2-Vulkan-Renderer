@@ -67,7 +67,7 @@ namespace dae
         void UpdateUniformBuffer(uint32_t currentImage);
 
 		Window m_window{};
-        Camera m_camera{ {0.f, -2.f, 0.f }, 90.f };
+        Camera m_camera{};
 
         Context m_context{};
 
