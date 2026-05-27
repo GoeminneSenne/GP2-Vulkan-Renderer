@@ -23,6 +23,7 @@
 #include "../framework/PipelineLayout.h"
 #include "../framework/Mesh.h"
 #include "../framework/SyncManager.h"
+#include "../framework/Camera.h"
 #include "../framework/SwapchainSupportDetails.h"
 
 constexpr static uint32_t WIDTH = 800;
@@ -54,16 +55,7 @@ namespace dae
 		void Cleanup();
 
 	private:
-        //void CreateWindow();
-        //void CreateContext();
-        //void CreateRenderPass();
-        //void CreateDescriptorSetLayout();
-        //void CreateGraphicsPipeline();
         void CreateDepthResources();
-        //void CreateTextureSampler();
-        //void CreateUniformBuffers();
-        //void CreateDescriptorPool();
-        //void CreateDescriptorSets();
 
         void CleanupSwapchain();
         void RecreateSwapchain();
@@ -72,9 +64,11 @@ namespace dae
         VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat FindDepthFormat() const;
         bool HasStencilComponent(VkFormat format) const;
-        void UpdateUniformBuffer(uint32_t currentImage) const;
+        void UpdateUniformBuffer(uint32_t currentImage);
 
 		Window m_window{};
+        Camera m_camera{ {0.f, -2.f, 0.f }, 90.f };
+
         Context m_context{};
 
         Swapchain m_swapchain{};

@@ -23,6 +23,7 @@ set(SOURCES
 	src/framework/Buffer.cpp
 	src/framework/Mesh.cpp
 	src/framework/SyncManager.cpp
+	
 	src/stb_image.cpp)
 
 #Create executable
