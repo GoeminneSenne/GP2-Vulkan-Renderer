@@ -9,19 +9,19 @@ void dae::Semaphore::Create(const Context& context)
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	LOG_VULKAN_ERROR(
-		vkCreateSemaphore(context.logicalDevice.device, &semaphoreInfo, nullptr, &m_semaphore),
+		vkCreateSemaphore(context.logicalDevice.handle, &semaphoreInfo, nullptr, &m_handle),
 		"failed to create semaphore"
 	);
 }
 
 void dae::Semaphore::Destroy(const Context& context) const
 {
-	if (m_semaphore == VK_NULL_HANDLE) return;
+	if (m_handle == VK_NULL_HANDLE) return;
 
-	vkDestroySemaphore(context.logicalDevice.device, m_semaphore, nullptr);
+	vkDestroySemaphore(context.logicalDevice.handle, m_handle, nullptr);
 }
 
 VkSemaphore dae::Semaphore::GetHandle() const
 {
-	return m_semaphore;
+	return m_handle;
 }

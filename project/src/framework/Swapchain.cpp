@@ -57,13 +57,13 @@ void dae::Swapchain::Create(const Window& window, const Context& context)
 	createInfo.oldSwapchain = VK_NULL_HANDLE;
 
 	LOG_VULKAN_ERROR(
-		vkCreateSwapchainKHR(context.logicalDevice.device, &createInfo, nullptr, &swapchain),
+		vkCreateSwapchainKHR(context.logicalDevice.handle, &createInfo, nullptr, &handle),
 		"failed to create swapchain!"
 	);
 
-	vkGetSwapchainImagesKHR(context.logicalDevice.device, swapchain, &imageCount, nullptr);
+	vkGetSwapchainImagesKHR(context.logicalDevice.handle, handle, &imageCount, nullptr);
 	std::vector<VkImage> rawImages(imageCount);
-	vkGetSwapchainImagesKHR(context.logicalDevice.device, swapchain, &imageCount, rawImages.data());
+	vkGetSwapchainImagesKHR(context.logicalDevice.handle, handle, &imageCount, rawImages.data());
 
 
 	images.resize(imageCount);
@@ -88,9 +88,9 @@ void dae::Swapchain::Destroy(const Context& context)
 		image.Destroy(context);
 	}
 
-	if (swapchain != VK_NULL_HANDLE)
+	if (handle != VK_NULL_HANDLE)
 	{
-		vkDestroySwapchainKHR(context.logicalDevice.device, swapchain, nullptr);
+		vkDestroySwapchainKHR(context.logicalDevice.handle, handle, nullptr);
 	}
 
 }

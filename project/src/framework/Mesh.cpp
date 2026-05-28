@@ -112,7 +112,7 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 	VkBuffer buffer = vertexBuffer.handle;
 	VkDeviceSize offset = 0;
 
-	vkCmdBindVertexBuffers(command.commandBuffer, 0, 1, &buffer, &offset);
-	vkCmdBindIndexBuffer(command.commandBuffer, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(command.commandBuffer, indexCount, 1, 0, 0, 0);
+	vkCmdBindVertexBuffers(command.handle, 0, 1, &buffer, &offset);
+	vkCmdBindIndexBuffer(command.handle, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(command.handle, indexCount, 1, 0, 0, 0);
 }

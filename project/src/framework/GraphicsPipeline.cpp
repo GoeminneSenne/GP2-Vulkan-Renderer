@@ -8,9 +8,9 @@
 
 void dae::GraphicsPipeline::Destroy(const Context& context) const
 {
-	if (pipeline != VK_NULL_HANDLE)
+	if (handle != VK_NULL_HANDLE)
 	{
-		vkDestroyPipeline(context.logicalDevice.device, pipeline, nullptr);
+		vkDestroyPipeline(context.logicalDevice.handle, handle, nullptr);
 	}
 }
 
@@ -92,15 +92,15 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 	pipelineInfo.pDepthStencilState = nullptr;
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
-	pipelineInfo.layout = m_layout->layout;
-	pipelineInfo.renderPass = m_renderPass->renderPass;
+	pipelineInfo.layout = m_layout->handle;
+	pipelineInfo.renderPass = m_renderPass->handle;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
 	LOG_VULKAN_ERROR(
-		vkCreateGraphicsPipelines(context.logicalDevice.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.pipeline),
+		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
 		"failed to create graphics pipeline!"
 	);
 }
@@ -183,7 +183,7 @@ void dae::GraphicsPipelineLayoutBuilder::Build(const Context& context,
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
 	LOG_VULKAN_ERROR(
-		vkCreatePipelineLayout(context.logicalDevice.device, &pipelineLayoutInfo, nullptr, &pipelineLayout.layout),
+		vkCreatePipelineLayout(context.logicalDevice.handle, &pipelineLayoutInfo, nullptr, &pipelineLayout.handle),
 		"failed to create pipeline layout!"
 	);
 }

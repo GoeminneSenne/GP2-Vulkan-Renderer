@@ -16,11 +16,11 @@ namespace dae
 		void Submit(const VkSubmitInfo& submitInfo, const Fence& fence = {}) const;
 		VkResult Present(const VkPresentInfoKHR& presentInfo) const;
 
-		VkQueue Get() const;
+		VkQueue GetHandle() const;
 		uint32_t GetFamily() const;
 
 	private:
-		VkQueue m_queue = VK_NULL_HANDLE;
+		VkQueue m_handle = VK_NULL_HANDLE;
 		uint32_t m_family{};
 	};
 }

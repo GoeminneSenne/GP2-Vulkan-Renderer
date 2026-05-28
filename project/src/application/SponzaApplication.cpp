@@ -219,7 +219,7 @@ void dae::SponzaApplication::DrawFrame()
     inFlightFence->Wait(m_context);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(m_context.logicalDevice.device, m_swapchain.swapchain, UINT64_MAX, imageAvailableSemaphore->GetHandle(), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(m_context.logicalDevice.handle, m_swapchain.handle, UINT64_MAX, imageAvailableSemaphore->GetHandle(), VK_NULL_HANDLE, &imageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -233,7 +233,7 @@ void dae::SponzaApplication::DrawFrame()
 
     ///Record
     // --- Record --------------------------
-    vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].commandBuffer, 0);
+    vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].handle, 0);
     RecordRenderCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
 
     // --- Submit --------------------------
@@ -247,7 +247,7 @@ void dae::SponzaApplication::DrawFrame()
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].commandBuffer;
+    submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].handle;
 
     //Get semaphore using imageIndex instead of currentFrame!
     const Semaphore* renderFinishedSemaphore = m_syncManager.GetRenderFinishedSemaphore(imageIndex);
@@ -265,7 +265,7 @@ void dae::SponzaApplication::DrawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
-    VkSwapchainKHR swapChains[] = { m_swapchain.swapchain };
+    VkSwapchainKHR swapChains[] = { m_swapchain.handle };
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -285,7 +285,7 @@ void dae::SponzaApplication::DrawFrame()
 
 void dae::SponzaApplication::Cleanup()
 {
-    vkDeviceWaitIdle(m_context.logicalDevice.device);
+    vkDeviceWaitIdle(m_context.logicalDevice.handle);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
@@ -346,7 +346,7 @@ void dae::SponzaApplication::RecreateSwapchain()
         glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(m_context.logicalDevice.device);
+    vkDeviceWaitIdle(m_context.logicalDevice.handle);
 
     CleanupSwapchain();
 
@@ -363,8 +363,8 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_renderPass.renderPass;
-    renderPassInfo.framebuffer = m_swapchain.framebuffers[imageIndex].framebuffer;
+    renderPassInfo.renderPass = m_renderPass.handle;
+    renderPassInfo.framebuffer = m_swapchain.framebuffers[imageIndex].handle;
     renderPassInfo.renderArea.offset = { 0,0 };
     renderPassInfo.renderArea.extent = m_swapchain.extent;
 
@@ -375,9 +375,9 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(commandBuffer.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer.handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.pipeline);
+    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
 
     VkViewport viewport{};
     viewport.x = 0.f;
@@ -386,19 +386,19 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     viewport.height = static_cast<float>(m_swapchain.extent.height);
     viewport.minDepth = 0.f;
     viewport.maxDepth = 1.f;
-    vkCmdSetViewport(commandBuffer.commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = { 0,0 };
     scissor.extent = m_swapchain.extent;
-    vkCmdSetScissor(commandBuffer.commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
 
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
-    vkCmdBindDescriptorSets(commandBuffer.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.layout, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
 
     m_pMesh->RecordDraw(commandBuffer);
 
-    vkCmdEndRenderPass(commandBuffer.commandBuffer);
+    vkCmdEndRenderPass(commandBuffer.handle);
 
     commandBuffer.End();
 }
@@ -409,7 +409,7 @@ VkFormat dae::SponzaApplication::FindSupportedFormat(const std::vector<VkFormat>
     for (VkFormat format : candidates)
     {
         VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice.physicalDevice, format, &properties);
+        vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice.handle, format, &properties);
 
         if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
         {

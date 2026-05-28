@@ -18,7 +18,7 @@ namespace dae
 		void Create(const Window& window, const Context& context);
 		void Destroy(const Context& context);
 
-		VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+		VkSwapchainKHR handle = VK_NULL_HANDLE;
 		std::vector<Image> images;
 		VkFormat imageFormat;
 		VkExtent2D extent;

@@ -9,7 +9,7 @@ namespace dae
 
 	struct Sampler final
 	{
-		VkSampler sampler = VK_NULL_HANDLE;
+		VkSampler handle = VK_NULL_HANDLE;
 
 		void Destroy(const Context& context);
 	};

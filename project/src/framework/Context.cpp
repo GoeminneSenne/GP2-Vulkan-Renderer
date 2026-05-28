@@ -54,7 +54,7 @@ void dae::ContextFactory::CreateInstance(Context& context)
 void dae::ContextFactory::CreateSurface(Context& context, const Window* pWindow)
 {
 	LOG_VULKAN_ERROR(
-		glfwCreateWindowSurface(context.instance.instance, pWindow->window, nullptr, &context.instance.surface),
+		glfwCreateWindowSurface(context.instance.handle, pWindow->window, nullptr, &context.instance.surface),
 		"failed to create window surface!"
 	);
 }
@@ -86,9 +86,9 @@ void dae::ContextFactory::CreateCommandPool(Context& context)
 void dae::ContextFactory::CreateAllocator(Context& context)
 {
 	VmaAllocatorCreateInfo createInfo{};
-	createInfo.physicalDevice = context.physicalDevice.physicalDevice;
-	createInfo.device = context.logicalDevice.device;
-	createInfo.instance = context.instance.instance;
+	createInfo.physicalDevice = context.physicalDevice.handle;
+	createInfo.device = context.logicalDevice.handle;
+	createInfo.instance = context.instance.handle;
 	createInfo.flags = 0;
 
 	LOG_VULKAN_ERROR(

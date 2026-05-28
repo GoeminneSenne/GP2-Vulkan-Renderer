@@ -32,7 +32,7 @@ namespace dae
 			viewInfo.subresourceRange.layerCount = 1;
 
 			LOG_VULKAN_ERROR(
-				vkCreateImageView(context.logicalDevice.device, &viewInfo, nullptr, &image.view),
+				vkCreateImageView(context.logicalDevice.handle, &viewInfo, nullptr, &image.view),
 				"failed to create image view!"
 			);
 		}
@@ -40,7 +40,7 @@ namespace dae
 		inline void GenerateMipmaps(const CommandBuffer& commandBuffer, const Context& context, Image& image)
 		{
 			VkFormatProperties formatProperties;
-			vkGetPhysicalDeviceFormatProperties(context.physicalDevice.physicalDevice, image.format, &formatProperties);
+			vkGetPhysicalDeviceFormatProperties(context.physicalDevice.handle, image.format, &formatProperties);
 
 			if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 				throw std::runtime_error("texture image format does not support linear blitting!");
@@ -66,7 +66,7 @@ namespace dae
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-				vkCmdPipelineBarrier(commandBuffer.commandBuffer,
+				vkCmdPipelineBarrier(commandBuffer.handle,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
 					0, nullptr,
 					0, nullptr,
@@ -85,7 +85,7 @@ namespace dae
 				blit.dstSubresource.baseArrayLayer = 0;
 				blit.dstSubresource.layerCount = 1;
 
-				vkCmdBlitImage(commandBuffer.commandBuffer,
+				vkCmdBlitImage(commandBuffer.handle,
 					image.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &blit,
@@ -96,7 +96,7 @@ namespace dae
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-				vkCmdPipelineBarrier(commandBuffer.commandBuffer,
+				vkCmdPipelineBarrier(commandBuffer.handle,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
 					0, nullptr,
 					0, nullptr,
@@ -112,7 +112,7 @@ namespace dae
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-			vkCmdPipelineBarrier(commandBuffer.commandBuffer,
+			vkCmdPipelineBarrier(commandBuffer.handle,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
 				0, nullptr,
 				0, nullptr,
@@ -140,7 +140,7 @@ namespace dae
 			barrier.dstAccessMask = dstAccessMask;
 
 			vkCmdPipelineBarrier(
-				commandBuffer.commandBuffer,
+				commandBuffer.handle,
 				sourceStage, destinationStage,
 				0,
 				0, nullptr,
@@ -166,7 +166,7 @@ namespace dae
 			region.imageOffset = { 0, 0, 0 };
 			region.imageExtent = { image.extent.width, image.extent.height, 1 };
 
-			vkCmdCopyBufferToImage(commandBuffer.commandBuffer, source.handle, image.image,
+			vkCmdCopyBufferToImage(commandBuffer.handle, source.handle, image.image,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		}
 

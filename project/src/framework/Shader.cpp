@@ -12,7 +12,7 @@ void dae::Shader::Destroy(const Context& context)
 {
 	if (module != VK_NULL_HANDLE)
 	{
-		vkDestroyShaderModule(context.logicalDevice.device, module, nullptr);
+		vkDestroyShaderModule(context.logicalDevice.handle, module, nullptr);
 	}
 }
 
@@ -29,7 +29,7 @@ void dae::ShaderLoader::Load(const Context& context, Shader& shader) const
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
 	LOG_VULKAN_ERROR(
-		vkCreateShaderModule(context.logicalDevice.device, &createInfo, nullptr, &shader.module),
+		vkCreateShaderModule(context.logicalDevice.handle, &createInfo, nullptr, &shader.module),
 		"failed to create shader module!"
 	);
 

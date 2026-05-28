@@ -4,25 +4,25 @@
 #include "Fence.h"
 
 dae::Queue::Queue(VkQueue queue, uint32_t family)
-	: m_queue(queue), m_family(family)
+	: m_handle(queue), m_family(family)
 {}
 
 void dae::Queue::Submit(const VkSubmitInfo& submitInfo, const Fence& fence) const
 {
 	LOG_VULKAN_ERROR(
-		vkQueueSubmit(m_queue, 1, &submitInfo, fence.Get()),
+		vkQueueSubmit(m_handle, 1, &submitInfo, fence.GetHandle()),
 		"failed to submit draw command buffer!"
 	);
 }
 
 VkResult dae::Queue::Present(const VkPresentInfoKHR& presentInfo) const
 {
-	return vkQueuePresentKHR(m_queue, &presentInfo);
+	return vkQueuePresentKHR(m_handle, &presentInfo);
 }
 
-VkQueue dae::Queue::Get() const
+VkQueue dae::Queue::GetHandle() const
 {
-	return m_queue;
+	return m_handle;
 }
 
 uint32_t dae::Queue::GetFamily() const

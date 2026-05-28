@@ -11,12 +11,12 @@ void dae::CommandBuffer::Begin(VkCommandBufferUsageFlags flags)
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = flags;
 
-	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+	vkBeginCommandBuffer(handle, &beginInfo);
 }
 
 void dae::CommandBuffer::End()
 {
-	vkEndCommandBuffer(commandBuffer);
+	vkEndCommandBuffer(handle);
 }
 
 ///CommandPool
@@ -32,14 +32,14 @@ void dae::CommandPool::CreateCommandPool(LogicalDevice* pLogicalDevice)
 	poolInfo.queueFamilyIndex = pLogicalDevice->graphicsQueue.GetFamily();
 
 	LOG_VULKAN_ERROR(
-		vkCreateCommandPool(pLogicalDevice->device, &poolInfo, nullptr, &m_commandPool),
+		vkCreateCommandPool(pLogicalDevice->handle, &poolInfo, nullptr, &m_commandPool),
 		"failed to create command pool!"
 	);
 }
 
 void dae::CommandPool::Destroy()
 {
-	vkDestroyCommandPool(m_pLogicalDevice->device, m_commandPool, nullptr);
+	vkDestroyCommandPool(m_pLogicalDevice->handle, m_commandPool, nullptr);
 }
 
 dae::CommandBuffer dae::CommandPool::Allocate() const
@@ -53,7 +53,7 @@ dae::CommandBuffer dae::CommandPool::Allocate() const
 	allocInfo.commandBufferCount = 1;
 
 	LOG_VULKAN_ERROR(
-		vkAllocateCommandBuffers(m_pLogicalDevice->device, &allocInfo, &commandBuffer.commandBuffer),
+		vkAllocateCommandBuffers(m_pLogicalDevice->handle, &allocInfo, &commandBuffer.handle),
 		"failed to allocate command buffer!"
 	);
 
@@ -72,7 +72,7 @@ std::vector<dae::CommandBuffer> dae::CommandPool::Allocate(uint32_t count) const
 	allocInfo.commandBufferCount = count;
 
 	LOG_VULKAN_ERROR(
-		vkAllocateCommandBuffers(m_pLogicalDevice->device, &allocInfo, rawBuffers.data()),
+		vkAllocateCommandBuffers(m_pLogicalDevice->handle, &allocInfo, rawBuffers.data()),
 		"failed to allocate command buffer!"
 	);
 
@@ -87,7 +87,7 @@ std::vector<dae::CommandBuffer> dae::CommandPool::Allocate(uint32_t count) const
 
 void dae::CommandPool::Free(CommandBuffer& commandBuffer) const
 {
-	vkFreeCommandBuffers(m_pLogicalDevice->device, m_commandPool, 1, &commandBuffer.commandBuffer);
+	vkFreeCommandBuffers(m_pLogicalDevice->handle, m_commandPool, 1, &commandBuffer.handle);
 }
 
 void dae::CommandPool::Free(std::vector<CommandBuffer>& commandBuffers) const
@@ -109,7 +109,7 @@ dae::CommandBuffer dae::CommandPool::BeginSingleTimeCommand() const
 	allocInfo.commandBufferCount = 1;
 
 	LOG_VULKAN_ERROR(
-		vkAllocateCommandBuffers(m_pLogicalDevice->device, &allocInfo, &commandBuffer.commandBuffer),
+		vkAllocateCommandBuffers(m_pLogicalDevice->handle, &allocInfo, &commandBuffer.handle),
 		"failed to allocate command buffer!"
 	);
 
@@ -124,10 +124,10 @@ void dae::CommandPool::EndSingleTimeCommand(CommandBuffer& commandBuffer) const
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer.commandBuffer;
+	submitInfo.pCommandBuffers = &commandBuffer.handle;
 
 	m_pLogicalDevice->graphicsQueue.Submit(submitInfo);
-	vkQueueWaitIdle(m_pLogicalDevice->graphicsQueue.Get());
+	vkQueueWaitIdle(m_pLogicalDevice->graphicsQueue.GetHandle());
 
-	vkFreeCommandBuffers(m_pLogicalDevice->device, m_commandPool, 1, &commandBuffer.commandBuffer);
+	vkFreeCommandBuffers(m_pLogicalDevice->handle, m_commandPool, 1, &commandBuffer.handle);
 }

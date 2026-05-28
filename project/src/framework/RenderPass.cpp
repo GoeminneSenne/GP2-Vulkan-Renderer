@@ -5,7 +5,7 @@
 
 void dae::RenderPass::Destroy(const Context& context) const
 {
-    vkDestroyRenderPass(context.logicalDevice.device, renderPass, nullptr);
+    vkDestroyRenderPass(context.logicalDevice.handle, handle, nullptr);
 }
 
 void dae::RenderPassBuilder::Build(const Context& context, RenderPass& renderPass) const
@@ -38,7 +38,7 @@ void dae::RenderPassBuilder::Build(const Context& context, RenderPass& renderPas
     renderPassInfo.pDependencies = &dependency;
 
     LOG_VULKAN_ERROR(
-		vkCreateRenderPass(context.logicalDevice.device, &renderPassInfo, nullptr, &renderPass.renderPass),
+		vkCreateRenderPass(context.logicalDevice.handle, &renderPassInfo, nullptr, &renderPass.handle),
         "failed to create render pass!"
 	);
 }

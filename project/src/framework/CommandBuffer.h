@@ -9,7 +9,7 @@ namespace dae
 
 	struct CommandBuffer final
 	{
-		VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+		VkCommandBuffer handle = VK_NULL_HANDLE;
 
 		void Begin(VkCommandBufferUsageFlags flags = {});
 		void End();

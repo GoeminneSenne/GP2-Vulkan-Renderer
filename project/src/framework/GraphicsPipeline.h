@@ -12,7 +12,7 @@ namespace dae
 
 	struct GraphicsPipeline final
 	{
-		VkPipeline pipeline = VK_NULL_HANDLE;
+		VkPipeline handle = VK_NULL_HANDLE;
 
 		void Destroy(const Context& context) const;
 	};

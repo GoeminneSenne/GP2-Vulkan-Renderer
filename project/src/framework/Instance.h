@@ -14,7 +14,7 @@ namespace dae
 	{
 		void Destroy();
 
-		VkInstance instance = VK_NULL_HANDLE;
+		VkInstance handle = VK_NULL_HANDLE;
 		VulkanInstanceDebugUtilsFuncTable debugTable; //TODO static maken in common file
 		VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 		VkSurfaceKHR surface = VK_NULL_HANDLE;

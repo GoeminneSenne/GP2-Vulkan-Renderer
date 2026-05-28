@@ -5,7 +5,7 @@
 
 void dae::Sampler::Destroy(const Context& context)
 {
-	vkDestroySampler(context.logicalDevice.device, sampler, nullptr);
+	vkDestroySampler(context.logicalDevice.handle, handle, nullptr);
 }
 
 void dae::SamplerBuilder::Build(const Context& context, Sampler& sampler) const
@@ -41,7 +41,7 @@ void dae::SamplerBuilder::Build(const Context& context, Sampler& sampler) const
 	samplerInfo.maxLod = m_maxLod;
 
 	LOG_VULKAN_ERROR(
-		vkCreateSampler(context.logicalDevice.device, &samplerInfo, nullptr, &sampler.sampler),
+		vkCreateSampler(context.logicalDevice.handle, &samplerInfo, nullptr, &sampler.handle),
 		"failed to create sampler!"
 	);
 }

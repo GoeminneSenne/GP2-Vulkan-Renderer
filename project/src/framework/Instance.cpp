@@ -7,11 +7,11 @@ void dae::Instance::Destroy()
 {
 	if (debugMessenger != VK_NULL_HANDLE)
 	{
-		debugTable.vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+		debugTable.vkDestroyDebugUtilsMessengerEXT(handle, debugMessenger, nullptr);
 	}
 
-	vkDestroySurfaceKHR(instance, surface, nullptr);
-	vkDestroyInstance(instance, nullptr);
+	vkDestroySurfaceKHR(handle, surface, nullptr);
+	vkDestroyInstance(handle, nullptr);
 }
 
 void dae::InstanceBuilder::Build(Instance& instance)
@@ -53,7 +53,7 @@ void dae::InstanceBuilder::Build(Instance& instance)
 	}
 
 	LOG_VULKAN_ERROR(
-		vkCreateInstance(&createInfo, nullptr, &instance.instance),
+		vkCreateInstance(&createInfo, nullptr, &instance.handle),
 		"failed to create instance!"
 	);
 
@@ -62,13 +62,13 @@ void dae::InstanceBuilder::Build(Instance& instance)
 	///TODO: seperate private function?
 	if (!useValidation) return;
 
-	LoadInstanceDebugFunctions(instance.instance, instance.debugTable);
+	LoadInstanceDebugFunctions(instance.handle, instance.debugTable);
 
 	VkDebugUtilsMessengerCreateInfoEXT debugcreateInfo;
 	PopulateDebugMessengerCreateInfo(debugcreateInfo);
 
 	LOG_VULKAN_ERROR(
-		instance.debugTable.vkCreateDebugUtilsMessengerEXT(instance.instance, &debugcreateInfo, nullptr, &instance.debugMessenger),
+		instance.debugTable.vkCreateDebugUtilsMessengerEXT(instance.handle, &debugcreateInfo, nullptr, &instance.debugMessenger),
 		"failed to create debug messenger"
 	);
 }

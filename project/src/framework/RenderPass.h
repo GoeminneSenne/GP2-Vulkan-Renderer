@@ -7,7 +7,7 @@ namespace dae
 {
 	struct RenderPass final
 	{
-		VkRenderPass renderPass = VK_NULL_HANDLE;
+		VkRenderPass handle = VK_NULL_HANDLE;
 
 		void Destroy(const Context& context) const;
 	};

@@ -7,13 +7,13 @@ namespace dae
 {
 	struct PipelineLayout final
 	{
-		VkPipelineLayout layout = VK_NULL_HANDLE;
+		VkPipelineLayout handle = VK_NULL_HANDLE;
 		
 		void Destroy(const Context& context) const
 		{
-			if (layout != VK_NULL_HANDLE)
+			if (handle != VK_NULL_HANDLE)
 			{
-				vkDestroyPipelineLayout(context.logicalDevice.device, layout, nullptr);
+				vkDestroyPipelineLayout(context.logicalDevice.handle, handle, nullptr);
 			}
 		}
 	};

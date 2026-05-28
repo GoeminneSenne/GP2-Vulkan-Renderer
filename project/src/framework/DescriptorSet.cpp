@@ -8,7 +8,7 @@
 
 void dae::DescriptorSetLayout::Destroy(const Context& context) const
 {
-	vkDestroyDescriptorSetLayout(context.logicalDevice.device, layout, nullptr);
+	vkDestroyDescriptorSetLayout(context.logicalDevice.handle, layout, nullptr);
 }
 
 dae::DescriptorSetWriter& dae::DescriptorSetWriter::SetTarget(DescriptorSet* pTarget)
@@ -45,7 +45,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 	m_imageInfo = {};
 	m_imageInfo.imageLayout = layout;
 	m_imageInfo.imageView = image.view;
-	m_imageInfo.sampler = sampler.sampler;
+	m_imageInfo.sampler = sampler.handle;
 
 	VkWriteDescriptorSet write{};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -62,7 +62,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 
 void dae::DescriptorSetWriter::UpdateTarget(const Context& context) const
 {
-	vkUpdateDescriptorSets(context.logicalDevice.device, static_cast<uint32_t>(m_writes.size()), m_writes.data(), 0, nullptr);
+	vkUpdateDescriptorSets(context.logicalDevice.handle, static_cast<uint32_t>(m_writes.size()), m_writes.data(), 0, nullptr);
 }
 
 void dae::DescriptorSetLayoutBuilder::Build(const Context& context, DescriptorSetLayout& descriptorSetLayout)
@@ -87,7 +87,7 @@ void dae::DescriptorSetLayoutBuilder::Build(const Context& context, DescriptorSe
 	layoutInfo.pBindings = layoutBindings.data();
 
 	LOG_VULKAN_ERROR(
-		vkCreateDescriptorSetLayout(context.logicalDevice.device, &layoutInfo, nullptr, &descriptorSetLayout.layout),
+		vkCreateDescriptorSetLayout(context.logicalDevice.handle, &layoutInfo, nullptr, &descriptorSetLayout.layout),
 		"failed to create descriptor set layout!"
 	);
 
@@ -112,7 +112,7 @@ void dae::DescriptorPool::Create(const Context& context,
 	poolInfo.maxSets = m_maxSets;
 
 	LOG_VULKAN_ERROR(
-		vkCreateDescriptorPool(context.logicalDevice.device, &poolInfo, nullptr, &m_pool),
+		vkCreateDescriptorPool(context.logicalDevice.handle, &poolInfo, nullptr, &m_pool),
 		"failed to create descriptor pool!"
 	);
 }
@@ -121,7 +121,7 @@ void dae::DescriptorPool::Destroy(const Context& context) const
 {
 	if (m_pool != VK_NULL_HANDLE)
 	{
-		vkDestroyDescriptorPool(context.logicalDevice.device, m_pool, nullptr);
+		vkDestroyDescriptorPool(context.logicalDevice.handle, m_pool, nullptr);
 	}
 }
 
@@ -136,7 +136,7 @@ std::vector<dae::DescriptorSet> dae::DescriptorPool::Allocate(const Context& con
 
 	std::vector<VkDescriptorSet> rawSets(count);
 	LOG_VULKAN_ERROR(
-		vkAllocateDescriptorSets(context.logicalDevice.device, &allocInfo, rawSets.data()),
+		vkAllocateDescriptorSets(context.logicalDevice.handle, &allocInfo, rawSets.data()),
 		"failed to allocate descriptor sets!"
 	);
 

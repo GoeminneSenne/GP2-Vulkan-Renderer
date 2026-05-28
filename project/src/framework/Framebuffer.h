@@ -11,8 +11,8 @@ namespace dae
 
 	struct Framebuffer final
 	{
-		VkFramebuffer framebuffer;
-		VkExtent2D extent;
+		VkFramebuffer handle = VK_NULL_HANDLE;
+		VkExtent2D extent{};
 		std::vector<VkImageView> attachments;
 
 		void Destroy(const Context& context) const;

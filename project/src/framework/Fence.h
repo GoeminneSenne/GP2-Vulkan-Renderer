@@ -16,9 +16,9 @@ namespace dae
 		void Wait(const Context& context) const;
 		void Reset(const Context& context) const;
 		
-		VkFence Get() const;
+		VkFence GetHandle() const;
 
 	private:
-		VkFence m_fence = VK_NULL_HANDLE;
+		VkFence m_handle = VK_NULL_HANDLE;
 	};
 }

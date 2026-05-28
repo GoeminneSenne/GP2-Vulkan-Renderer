@@ -60,7 +60,7 @@ void dae::Buffer::RecordCopyFrom(const CommandBuffer& commandBuffer, const Buffe
 {
 	VkBufferCopy copyRegion{};
 	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer.commandBuffer, source.handle, this->handle, 1, &copyRegion);
+	vkCmdCopyBuffer(commandBuffer.handle, source.handle, this->handle, 1, &copyRegion);
 }
 
 void dae::Buffer::UploadData(const Context& context, const void* data, VkDeviceSize size)

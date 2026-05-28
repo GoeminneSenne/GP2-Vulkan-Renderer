@@ -15,6 +15,6 @@ namespace dae
 		VkSemaphore GetHandle() const;
 
 	private:
-		VkSemaphore m_semaphore = VK_NULL_HANDLE;
+		VkSemaphore m_handle = VK_NULL_HANDLE;
 	};
 }

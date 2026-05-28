@@ -16,7 +16,7 @@ void dae::Image::Destroy(const Context& context)
 
 	if (view != VK_NULL_HANDLE)
 	{
-		vkDestroyImageView(context.logicalDevice.device, view, nullptr);
+		vkDestroyImageView(context.logicalDevice.handle, view, nullptr);
 	}
 }
 

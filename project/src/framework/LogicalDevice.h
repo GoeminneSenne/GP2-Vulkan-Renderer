@@ -12,7 +12,7 @@ namespace dae
 	{
 		void Destroy();
 
-		VkDevice device = VK_NULL_HANDLE;
+		VkDevice handle = VK_NULL_HANDLE;
 		Queue graphicsQueue{};
 		Queue presentQueue{};
 	};

@@ -7,7 +7,7 @@
 
 void dae::LogicalDevice::Destroy()
 {
-	vkDestroyDevice(device, nullptr);
+	vkDestroyDevice(handle, nullptr);
 }
 
 void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, LogicalDevice& logicalDevice)
@@ -53,7 +53,7 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 	}
 
 	LOG_VULKAN_ERROR(
-		vkCreateDevice(physicalDevice.physicalDevice, &createInfo, nullptr, &logicalDevice.device),
+		vkCreateDevice(physicalDevice.handle, &createInfo, nullptr, &logicalDevice.handle),
 		"failed to create logical device!"
 	);
 
@@ -100,7 +100,7 @@ dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::UseValidation(bool use)
 dae::Queue dae::LogicalDeviceBuilder::InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const
 {
 	VkQueue rawQueue;
-	vkGetDeviceQueue(logicalDevice.device, queueFamily, 0, &rawQueue);
+	vkGetDeviceQueue(logicalDevice.handle, queueFamily, 0, &rawQueue);
 
 	return { rawQueue, queueFamily };
 }

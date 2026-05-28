@@ -5,14 +5,14 @@
 
 void dae::Framebuffer::Destroy(const Context& context) const
 {
-	vkDestroyFramebuffer(context.logicalDevice.device, framebuffer, nullptr);
+	vkDestroyFramebuffer(context.logicalDevice.handle, handle, nullptr);
 }
 
 void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebuffer)
 {
     VkFramebufferCreateInfo framebufferInfo{};
     framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferInfo.renderPass = m_renderPass.renderPass;
+    framebufferInfo.renderPass = m_renderPass.handle;
     framebufferInfo.attachmentCount = static_cast<uint32_t>(m_attachments.size());
     framebufferInfo.pAttachments = m_attachments.data();
     framebufferInfo.width = m_width;
@@ -20,7 +20,7 @@ void dae::FramebufferBuilder::Build(const Context& context, Framebuffer& framebu
     framebufferInfo.layers = 1;
 
     LOG_VULKAN_ERROR(
-        vkCreateFramebuffer(context.logicalDevice.device, &framebufferInfo, nullptr, &framebuffer.framebuffer),
+        vkCreateFramebuffer(context.logicalDevice.handle, &framebufferInfo, nullptr, &framebuffer.handle),
         "failed to create framebuffer!"
     );
 
