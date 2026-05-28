@@ -24,6 +24,7 @@
 #include "../framework/Mesh.h"
 #include "../framework/SyncManager.h"
 #include "../framework/Camera.h"
+#include "../framework/Timer.h"
 #include "../framework/SwapchainSupportDetails.h"
 
 constexpr static uint32_t WIDTH = 800;
@@ -68,6 +69,7 @@ namespace dae
         void UpdateUniformBuffer(uint32_t currentImage);
 
 		Window m_window{};
+        Timer m_timer{};
         Camera m_camera{};
 
         Context m_context{};

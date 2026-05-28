@@ -202,7 +202,8 @@ void dae::VulkanDemoApplication::PollEvents() const
 
 void dae::VulkanDemoApplication::Update()
 {
-    m_camera.Update(m_window);
+    m_timer.Update();
+    m_camera.Update(m_timer, m_window);
 
     UpdateUniformBuffer(m_syncManager.GetCurrentFrameIndex()); 
 }

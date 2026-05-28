@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include "Timer.h"
+
 namespace dae
 {
 	struct Camera final
@@ -75,9 +77,10 @@ namespace dae
 		}
 
 		//TODO add timer for frame independent movement
-		void Update(const Window& window)
+		void Update(const Timer& timer, const Window& window)
 		{
 			auto rawWindow = window.window;
+			const float deltaTime = timer.GetElapsed();
 
 			// --- Keyboard Input --------------------------
 			int forwardMove =
@@ -90,10 +93,10 @@ namespace dae
 
 			if (forwardMove || rightMove)
 			{
-				constexpr float keyboardMovementSpeed{ 0.0001f };
+				constexpr float keyboardMovementSpeed{ 4.f };
 
-				origin += static_cast<float>(forwardMove) * forward * keyboardMovementSpeed;
-				origin += static_cast<float>(rightMove) * right * keyboardMovementSpeed;
+				origin += static_cast<float>(forwardMove) * forward * keyboardMovementSpeed * deltaTime;
+				origin += static_cast<float>(rightMove) * right * keyboardMovementSpeed * deltaTime;
 			}
 
 
@@ -115,8 +118,8 @@ namespace dae
 			lastY = posY;
 
 			// --- Process Mouse Input --------------------------
-			constexpr float mouseMovementSpeed{ .04f };
-			constexpr float rotationSpeed{ .01f };
+			constexpr float mouseMovementSpeed{ 20.f };
+			constexpr float rotationSpeed{ 20.f };
 
 			bool leftClick = glfwGetMouseButton(rawWindow, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 			bool rightClick = glfwGetMouseButton(rawWindow, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
@@ -124,19 +127,19 @@ namespace dae
 			if (leftClick && rightClick)
 			{
 				//Moves up & down
-				origin -= static_cast<float>(deltaY) * up * mouseMovementSpeed;
+				origin -= static_cast<float>(deltaY) * up * mouseMovementSpeed * deltaTime;
 			}
 			else if (leftClick)
 			{
 				//Moves the camera forward & backward and rotates left & right
-				origin -= static_cast<float>(deltaY) * forward * mouseMovementSpeed;
-				totalYaw -= static_cast<float>(deltaX) * rotationSpeed;
+				origin -= static_cast<float>(deltaY) * forward * mouseMovementSpeed * deltaTime;
+				totalYaw -= static_cast<float>(deltaX) * rotationSpeed * deltaTime;
 			}
 			else if (rightClick)
 			{
 				//Rotate the viewport camera
-				totalPitch -= static_cast<float>(deltaY) * rotationSpeed;
-				totalYaw -= static_cast<float>(deltaX) * rotationSpeed;
+				totalPitch -= static_cast<float>(deltaY) * rotationSpeed * deltaTime;
+				totalYaw -= static_cast<float>(deltaX) * rotationSpeed * deltaTime;
 			}
 		}
 	};
