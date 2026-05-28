@@ -47,29 +47,25 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan_Framework)
 include(FetchContent)
 
 #add glm library
-find_package(glm CONFIG QUIET)
-if(NOT glm_FOUND)
-	FetchContent_Declare(
-		glm
-		URL https://github.com/g-truc/glm/releases/download/1.0.3/glm-1.0.3.zip
-		DOWNLOAD_NO_PROGRESS ON
-		DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
-	)
-	FetchContent_MakeAvailable(glm)
-endif()
+FetchContent_Declare(
+	glm
+	URL https://github.com/g-truc/glm/releases/download/1.0.3/glm-1.0.3.zip
+	DOWNLOAD_NO_PROGRESS ON
+	DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+)
+FetchContent_MakeAvailable(glm)
+
 
 
 #add glfw
-find_package(glfw CONFIG QUIET)
-if(NOT glfw_FOUND)
-	FetchContent_Declare(
-		glfw
-		URL https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
-		DOWNLOAD_NO_PROGRESS ON
-		DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
-	)
-	FetchContent_MakeAvailable(glfw)
-endif()
+FetchContent_Declare(
+	glfw
+	URL https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
+	DOWNLOAD_NO_PROGRESS ON
+	DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/downloads
+)
+FetchContent_MakeAvailable(glfw)
+
 
 
 #add Vulkan
@@ -84,11 +80,35 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
+# Assimpµ
+set(CMAKE_DISABLE_FIND_PACKAGE_Doxygen TRUE) 
+FetchContent_Declare(
+	assimp
+	GIT_REPOSITORY https://github.com/assimp/assimp.git
+	GIT_TAG v6.0.5
+	GIT_SHALLOW TRUE
+)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_DOCS OFF CACHE BOOL "" FORCE) 
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE BOOL "" FORCE)
+set(ASSIMP_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(assimp)
+
 target_link_libraries(Vulkan_Framework PUBLIC
 	glm
 	glfw
 	${Vulkan_LIBRARIES}
 	GPUOpen::VulkanMemoryAllocator
+	assimp
 )
 
 target_include_directories(Vulkan_Framework PUBLIC ${Vulkan_INCLUDE_DIRS})
