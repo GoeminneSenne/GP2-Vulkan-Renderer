@@ -25,6 +25,7 @@
 #include <framework/Camera.h>
 #include <framework/Timer.h>
 #include <framework/SwapchainSupportDetails.h>
+#include <framework/GLTFLoader.h>
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;

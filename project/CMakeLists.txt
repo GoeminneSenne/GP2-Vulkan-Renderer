@@ -21,7 +21,8 @@ set(FRAMEWORK_SOURCES
 	src/framework/Framebuffer.cpp
 	src/framework/Buffer.cpp
 	src/framework/Mesh.cpp
-	src/framework/SyncManager.cpp	
+	src/framework/SyncManager.cpp
+	src/framework/GLTFLoader.cpp
 )
 
 add_library(Vulkan_Framework STATIC ${FRAMEWORK_SOURCES})

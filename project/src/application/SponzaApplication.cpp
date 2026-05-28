@@ -11,6 +11,7 @@
 #include <framework/Vertex.h>
 #include <framework/Framebuffer.h>
 #include <framework/ImageHelpers.h>
+#include <framework/GLTFLoader.h>
 
 
 void dae::SponzaApplication::Init()
@@ -188,6 +189,13 @@ void dae::SponzaApplication::Init()
     }
 
     m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
+
+
+
+    // --- GLTF Loading -----------------------------
+    GLTFLoader loader{};
+    auto result = loader.LoadFile("resources/sponza/Sponza.gltf");
+
 }
 
 bool dae::SponzaApplication::ShouldClose() const
@@ -231,7 +239,6 @@ void dae::SponzaApplication::DrawFrame()
 
     inFlightFence->Reset(m_context);
 
-    ///Record
     // --- Record --------------------------
     vkResetCommandBuffer(m_renderCommandBuffers[currentFrame].handle, 0);
     RecordRenderCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
@@ -446,8 +453,8 @@ void dae::SponzaApplication::UpdateUniformBuffer(uint32_t currentImage)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.f), glm::vec3(0.f, 0.f, 1.f));
-    ubo.view = m_camera.CalculateViewMatrix();
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), glm::vec3(0.f, 0.f, 1.f));
+	ubo.view = m_camera.CalculateViewMatrix();
     ubo.proj = m_camera.projectionMatrix;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
