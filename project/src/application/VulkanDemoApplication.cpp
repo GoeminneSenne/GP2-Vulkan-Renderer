@@ -3,14 +3,14 @@
 #include <array>
 #include <chrono>
 
-#include "../framework/DescriptorSet.h"
-#include "../framework/Sampler.h"
-#include "../framework/RenderPass.h"
-#include "../framework/Shader.h"
-#include "../framework/SwapchainHelpers.h"
-#include "../framework/Vertex.h"
-#include "../framework/Framebuffer.h"
-#include "../framework/ImageHelpers.h"
+#include <framework/DescriptorSet.h>
+#include <framework/Sampler.h>
+#include <framework/RenderPass.h>
+#include <framework/Shader.h>
+#include <framework/SwapchainHelpers.h>
+#include <framework/Vertex.h>
+#include <framework/Framebuffer.h>
+#include <framework/ImageHelpers.h>
 
 
 void dae::VulkanDemoApplication::Init()
@@ -65,11 +65,11 @@ void dae::VulkanDemoApplication::Init()
 
         ShaderLoader shaderLoader = {};
         shaderLoader
-            .SetFilename("resources/shaders/base_shader.vert.spv")
+            .SetFilename("resources/viking_room/shaders/base_shader.vert.spv")
             .Load(m_context, vertexShader);
 
         shaderLoader
-            .SetFilename("resources/shaders/base_shader.frag.spv")
+            .SetFilename("resources/viking_room/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
 
         GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};

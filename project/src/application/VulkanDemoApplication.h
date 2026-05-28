@@ -9,29 +9,30 @@
 #include <memory>
 #include <glm/gtx/hash.hpp>
 
-#include "../framework/Window.h"
-#include "../framework/Context.h"
-#include "../framework/Common.h"
-#include "../framework/Swapchain.h"
-#include "../framework/Image.h"
-#include "../framework/Sampler.h"
-#include "../framework/CommandBuffer.h"
-#include "../framework/Buffer.h"
-#include "../framework/DescriptorSet.h"
-#include "../framework/RenderPass.h"
-#include "../framework/GraphicsPipeline.h"
-#include "../framework/PipelineLayout.h"
-#include "../framework/Mesh.h"
-#include "../framework/SyncManager.h"
-#include "../framework/Camera.h"
-#include "../framework/Timer.h"
-#include "../framework/SwapchainSupportDetails.h"
+#include <framework/Window.h>
+#include <framework/Context.h>
+#include <framework/Common.h>
+#include <framework/Swapchain.h>
+#include <framework/Image.h>
+#include <framework/Sampler.h>
+#include <framework/CommandBuffer.h>
+#include <framework/Buffer.h>
+#include <framework/DescriptorSet.h>
+#include <framework/RenderPass.h>
+#include <framework/GraphicsPipeline.h>
+#include <framework/PipelineLayout.h>
+#include <framework/Mesh.h>
+#include <framework/SyncManager.h>
+#include <framework/Camera.h>
+#include <framework/Timer.h>
+#include <framework/SwapchainSupportDetails.h>
+
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
 
-const std::string MODEL_PATH = "resources/models/viking_room.obj";
-const std::string TEXTURE_PATH = "resources/textures/viking_room.png";
+const std::string MODEL_PATH = "resources/viking_room/viking_room.obj";
+const std::string TEXTURE_PATH = "resources/viking_room/viking_room.png";
 
 const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
 

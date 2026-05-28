@@ -1,7 +1,6 @@
-#Source files
-set(SOURCES
-	src/application/main.cpp
-	src/application/VulkanDemoApplication.cpp
+#Framework library
+set(FRAMEWORK_SOURCES
+	src/stb_image.cpp
 	src/framework/Window.cpp
 	src/framework/Instance.cpp
 	src/framework/PhysicalDevice.cpp 
@@ -22,15 +21,27 @@ set(SOURCES
 	src/framework/Framebuffer.cpp
 	src/framework/Buffer.cpp
 	src/framework/Mesh.cpp
-	src/framework/SyncManager.cpp
-	
-	src/stb_image.cpp)
+	src/framework/SyncManager.cpp	
+)
+
+add_library(Vulkan_Framework STATIC ${FRAMEWORK_SOURCES})
+target_compile_features(Vulkan_Framework PUBLIC cxx_std_20)
+target_include_directories(Vulkan_Framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+#Executable
+set(SOURCES
+	src/application/main.cpp
+	src/application/VulkanDemoApplication.cpp
+)
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 #Enable C++20 features
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+
+#Link framework library
+target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan_Framework)
 
 #Fetch required packages
 include(FetchContent)
@@ -47,7 +58,6 @@ if(NOT glm_FOUND)
 	FetchContent_MakeAvailable(glm)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glm)
 
 #add glfw
 find_package(glfw CONFIG QUIET)
@@ -61,13 +71,9 @@ if(NOT glfw_FOUND)
 	FetchContent_MakeAvailable(glfw)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 
 #add Vulkan
 find_package(Vulkan REQUIRED)
-
-target_include_directories(${PROJECT_NAME} PRIVATE ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${Vulkan_LIBRARIES})
 
 # Vulkan Memory Allocator
 FetchContent_Declare(
@@ -78,7 +84,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GPUOpen::VulkanMemoryAllocator)
+target_link_libraries(Vulkan_Framework PUBLIC
+	glm
+	glfw
+	${Vulkan_LIBRARIES}
+	GPUOpen::VulkanMemoryAllocator
+)
+
+target_include_directories(Vulkan_Framework PUBLIC ${Vulkan_INCLUDE_DIRS})
 
 # STB
 #Fetchcontent van stb
