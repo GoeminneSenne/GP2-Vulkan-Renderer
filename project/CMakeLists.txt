@@ -32,6 +32,7 @@ target_include_directories(Vulkan_Framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/s
 set(SOURCES
 	src/application/main.cpp
 	src/application/VulkanDemoApplication.cpp
+	src/application/SponzaApplication.cpp
 )
 
 #Create executable
