@@ -184,7 +184,7 @@ void dae::SponzaApplication::Init()
 
     // --- Camera -----------------------------
     {
-        m_camera.Initialize(90.f, { 0.f, -2.f, 0.f }, 0.1f, 10.f);
+        m_camera.Initialize(90.f, { 0.f, 0.f, 100.f }, 0.1f, 3000.f);
         m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
     }
 
@@ -193,8 +193,9 @@ void dae::SponzaApplication::Init()
 
 
     // --- GLTF Loading -----------------------------
-    GLTFLoader loader{};
-    auto result = loader.LoadFile("resources/sponza/Sponza.gltf");
+    GLTFLoader loader;
+    m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
+    m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
 }
 
@@ -403,7 +404,12 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
 
-    m_pMesh->RecordDraw(commandBuffer);
+    //m_pMesh->RecordDraw(commandBuffer);
+    for (auto& mesh : m_scene.meshes)
+    {
+	    mesh.RecordDraw(commandBuffer);
+    }
+    //m_scene.meshes[0].RecordDraw(commandBuffer);
 
     vkCmdEndRenderPass(commandBuffer.handle);
 
@@ -452,8 +458,17 @@ void dae::SponzaApplication::UpdateUniformBuffer(uint32_t currentImage)
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
+
+    glm::mat4 GLTF_TO_ENGINE(
+        1, 0, 0, 0,
+        0, 0, 1, 0,
+        0, -1, 0, 0,
+        0, 0, 0, 1
+    );
+
     UniformBufferObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), glm::vec3(0.f, 0.f, 1.f));
+    //ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
+    ubo.model = GLTF_TO_ENGINE;
 	ubo.view = m_camera.CalculateViewMatrix();
     ubo.proj = m_camera.projectionMatrix;
 

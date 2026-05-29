@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdexcept>
+#include <filesystem>
 
 #include <vulkan/vulkan_core.h>
 
@@ -170,7 +171,6 @@ namespace dae
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		}
 
-
 		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
 		{
 			int texWidth, texHeight, texChannels;
@@ -217,6 +217,12 @@ namespace dae
 			commandBuffer = context.commandPool.BeginSingleTimeCommand();
 			GenerateMipmaps(commandBuffer, context, image);
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
+		}
+
+		//Filesystem overload
+		inline void CreateTexture(const Context& context, const std::filesystem::path& path, Image& image)
+		{
+			CreateTexture(context, path.generic_string(), image);
 		}
 	}
 }

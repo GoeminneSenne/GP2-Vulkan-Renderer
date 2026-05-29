@@ -87,7 +87,8 @@ namespace dae
 
         SyncManager m_syncManager{};
 
-        std::unique_ptr<Mesh> m_pMesh;
+        Scene m_scene{};
+        std::unique_ptr<Mesh> m_pMesh{};
 
         std::vector<Buffer> m_uniformBuffers;
         std::vector<void*> uniformBuffersMapped;

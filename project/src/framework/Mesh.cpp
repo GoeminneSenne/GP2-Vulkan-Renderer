@@ -1,6 +1,8 @@
 #include "Mesh.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
+#include <iostream>
+
 #include "../../inc/tiny_obj_loader.h"
 
 #include <vector>
@@ -60,29 +62,35 @@ void dae::Mesh::LoadObj(const Context& context, const std::string& path)
 		}
 
 		uniqueVertices.clear();
-
-		vertexCount = static_cast<uint32_t>(vertices.size());
-		indexCount = static_cast<uint32_t>(indices.size());
 	}
 
+	Upload(context, vertices, indices);
+}
+
+void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertices,
+	const std::vector<uint32_t>& indices)
+{
+	vertexCount = static_cast<uint32_t>(vertices.size());
+	indexCount = static_cast<uint32_t>(indices.size());
 
 	// --- Vertex Buffer --------------------------
 	{
 		VkDeviceSize verticesSize = sizeof(vertices[0]) * vertexCount;
 
-		Buffer stagingBuffer;
-		stagingBuffer.CreateStaging(context, verticesSize);
-		stagingBuffer.UploadData(context, vertices.data(), verticesSize);
+
+		Buffer staging;
+		staging.CreateStaging(context, verticesSize);
+		staging.UploadData(context, vertices.data(), verticesSize);
 
 		vertexBuffer.CreateVertex(context, verticesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
-		vertexBuffer.RecordCopyFrom(command, stagingBuffer, verticesSize);
+		vertexBuffer.RecordCopyFrom(command, staging, verticesSize);
 		context.commandPool.EndSingleTimeCommand(command);
 
-		stagingBuffer.Destroy(context);
+		staging.Destroy(context);
 	}
-	
+
 	// --- Index Buffer --------------------------
 	{
 		VkDeviceSize indicesSize = sizeof(indices[0]) * indexCount;
@@ -107,6 +115,7 @@ void dae::Mesh::Destroy(const Context& context)
 	indexBuffer.Destroy(context);
 }
 
+
 void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 {
 	VkBuffer buffer = vertexBuffer.handle;
@@ -115,4 +124,22 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 	vkCmdBindVertexBuffers(command.handle, 0, 1, &buffer, &offset);
 	vkCmdBindIndexBuffer(command.handle, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(command.handle, indexCount, 1, 0, 0, 0);
+}
+
+void dae::Node::RecordDraw(const CommandBuffer& command) const
+{
+	
+}
+
+void dae::Scene::Destroy(const Context& context)
+{
+	for (auto& mesh : meshes)
+	{
+		mesh.Destroy(context);
+	}
+
+	for (auto& texture : textures)
+	{
+		texture.Destroy(context);
+	}
 }
