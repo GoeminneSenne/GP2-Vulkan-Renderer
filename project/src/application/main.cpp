@@ -1,9 +1,11 @@
 #pragma once
 #include <iostream>
 #include "SponzaApplication.h"
+//#include "VulkanDemoApplication.h"
 
 int main() {
     dae::SponzaApplication app{};
+    //dae::VulkanDemoApplication app{};
 
     try
     {

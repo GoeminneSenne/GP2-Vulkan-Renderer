@@ -66,11 +66,12 @@ void dae::SponzaApplication::Init()
 
         ShaderLoader shaderLoader = {};
         shaderLoader
-            .SetFilename("resources/viking_room/shaders/base_shader.vert.spv")
+            .SetFilename("resources/shaders/sponza.vert.spv")
+            //.SetFilename("resources/shaders/base_shader.vert.spv")
             .Load(m_context, vertexShader);
 
         shaderLoader
-            .SetFilename("resources/viking_room/shaders/base_shader.frag.spv")
+            .SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
 
         GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
@@ -133,10 +134,9 @@ void dae::SponzaApplication::Init()
         ImageHelpers::CreateTexture(m_context, TEXTURE_PATH, m_textureImage);
         m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
 
-        m_pMesh = std::make_unique<Mesh>();
-        m_pMesh->LoadObj(m_context, MODEL_PATH);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_pMesh->Destroy(m_context); });
-
+        GLTFLoader loader;
+        m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
+        m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
     }
     // --- Uniform Buffers --------------------------
     {
@@ -145,7 +145,8 @@ void dae::SponzaApplication::Init()
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+            //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+            VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
             m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
 
             vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
@@ -170,7 +171,8 @@ void dae::SponzaApplication::Init()
             DescriptorSetWriter writer = {};
             writer
                 .SetTarget(&m_descriptorSets[i])
-                .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
+                //.WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
+                .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
                 .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
                 .UpdateTarget(m_context);
         }
@@ -184,18 +186,12 @@ void dae::SponzaApplication::Init()
 
     // --- Camera -----------------------------
     {
-        m_camera.Initialize(90.f, { 0.f, 0.f, 100.f }, 0.1f, 3000.f);
+        m_camera.Initialize(90.f, { 0.f, 0.f, 1.f }, 0.1f, 3000.f);
         m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
     }
 
     m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
 
-
-
-    // --- GLTF Loading -----------------------------
-    GLTFLoader loader;
-    m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
-    m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
 }
 
@@ -453,6 +449,7 @@ bool dae::SponzaApplication::HasStencilComponent(VkFormat format) const
 
 void dae::SponzaApplication::UpdateUniformBuffer(uint32_t currentImage)
 {
+    /*
     static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
@@ -468,9 +465,20 @@ void dae::SponzaApplication::UpdateUniformBuffer(uint32_t currentImage)
 
     UniformBufferObject ubo{};
     //ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-    ubo.model = GLTF_TO_ENGINE;
+    //ubo.model = GLTF_TO_ENGINE;
+    ubo.model = m_scene.nodes[m_scene.rootNode].transform;
 	ubo.view = m_camera.CalculateViewMatrix();
     ubo.proj = m_camera.projectionMatrix;
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+	*/
+    
+    
+	ViewProjectionUBO ubo{};
+    ubo.view = m_camera.CalculateViewMatrix();
+    ubo.proj = m_camera.projectionMatrix;
+
+    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+     
+	
 }

@@ -65,11 +65,11 @@ void dae::VulkanDemoApplication::Init()
 
         ShaderLoader shaderLoader = {};
         shaderLoader
-            .SetFilename("resources/viking_room/shaders/base_shader.vert.spv")
+            .SetFilename("resources/shaders/base_shader.vert.spv")
             .Load(m_context, vertexShader);
 
         shaderLoader
-            .SetFilename("resources/viking_room/shaders/base_shader.frag.spv")
+            .SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
 
         GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};

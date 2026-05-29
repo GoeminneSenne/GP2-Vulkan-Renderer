@@ -26,23 +26,29 @@
 #include <framework/Timer.h>
 #include <framework/SwapchainSupportDetails.h>
 #include <framework/GLTFLoader.h>
+#include <framework/GpuData.h>
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
 
-const std::string MODEL_PATH = "resources/viking_room/viking_room.obj";
 const std::string TEXTURE_PATH = "resources/viking_room/viking_room.png";
 
 const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
 
 const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
+
+ 
+/*
 struct UniformBufferObject
 {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
 };
+ */
+
+
 
 namespace dae
 {
@@ -88,7 +94,6 @@ namespace dae
         SyncManager m_syncManager{};
 
         Scene m_scene{};
-        std::unique_ptr<Mesh> m_pMesh{};
 
         std::vector<Buffer> m_uniformBuffers;
         std::vector<void*> uniformBuffersMapped;

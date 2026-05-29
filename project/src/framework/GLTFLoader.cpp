@@ -37,9 +37,20 @@ dae::Scene dae::GLTFLoader::LoadScene(const Context& context, const std::string&
 	}
 
 	outScene.rootNode = ProcessNode(context, scene->mRootNode, scene, outScene);
+	auto& rootTransform = outScene.nodes[outScene.rootNode].transform;
+	rootTransform = GLTF_CONVERSION_MATRIX * rootTransform;
 
 	std::cout << "Scene has " <<  scene->mNumMeshes << " meshes" << "\n";
 	std::cout << "Scene has " <<  scene->mNumMaterials << " materials" << "\n";
+
+	for (int row = 0; row < 4; ++row)
+	{
+		for (int col = 0; col < 4; ++col)
+		{
+			std::cout << rootTransform[col][row] << " ";
+		}
+		std::cout << '\n';
+	}
 	return outScene;
 }
 
@@ -149,10 +160,22 @@ uint32_t dae::GLTFLoader::LoadTexture(const Context& context, aiString path, Sce
 
 glm::mat4 dae::GLTFLoader::ConvertMatrix(const aiMatrix4x4& mat)
 {
+	
 	return glm::mat4{
 		mat.a1, mat.b1, mat.c1, mat.d1,
 		mat.a2, mat.b2, mat.c2, mat.d2,
 		mat.a3, mat.b3, mat.c3, mat.d3,
 		mat.a4, mat.b4, mat.c4, mat.d4
 	};
+	 
+
+	/*
+	return glm::mat4
+	{
+		mat.a1, mat.a2, mat.a3, mat.a4,
+		mat.b1, mat.b2, mat.b3, mat.b4,
+		mat.c1, mat.c2, mat.c3, mat.c4,
+		mat.d1, mat.d2, mat.d3, mat.d4
+	};
+	*/
 }
