@@ -42,15 +42,8 @@ dae::Scene dae::GLTFLoader::LoadScene(const Context& context, const std::string&
 
 	std::cout << "Scene has " <<  scene->mNumMeshes << " meshes" << "\n";
 	std::cout << "Scene has " <<  scene->mNumMaterials << " materials" << "\n";
+	std::cout << "Scene has " << outScene.textures.size() << " textures\n";
 
-	for (int row = 0; row < 4; ++row)
-	{
-		for (int col = 0; col < 4; ++col)
-		{
-			std::cout << rootTransform[col][row] << " ";
-		}
-		std::cout << '\n';
-	}
 	return outScene;
 }
 
@@ -65,8 +58,6 @@ uint32_t dae::GLTFLoader::ProcessNode(const Context& context, aiNode* aiNode, co
 	for (uint32_t idx{}; idx < aiNode->mNumMeshes; ++idx)
 	{
 		uint32_t meshIndex = aiNode->mMeshes[idx];
-		std::cout << meshIndex << "\n";
-	
 		node.meshIndices.push_back(meshIndex);
 	}
 
@@ -107,7 +98,7 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 			vertex.texCoord =
 			{
 				aiMesh->mTextureCoords[0][idx].x,
-				aiMesh->mTextureCoords[0][idx].y
+				1.f - aiMesh->mTextureCoords[0][idx].y
 			};
 		}
 
@@ -126,10 +117,9 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 	}
 
 	// --- Mesh construction ------------------------
-
-	std::cout << "Creating Mesh" << "\n";
-
 	mesh.materialIndex = aiMesh->mMaterialIndex;
+	mesh.textureIndex = outScene.materials[mesh.materialIndex].baseColor;
+
 	mesh.Upload(context, vertices, indices);
 	outScene.meshes.push_back(mesh);
 	return static_cast<uint32_t>(outScene.meshes.size() - 1);
@@ -137,28 +127,36 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 
 uint32_t dae::GLTFLoader::ProcessMaterial(const Context& context, aiMaterial* aiMat, const aiScene* scene, Scene& outScene)
 {
+	Material mat{};
+
 	aiString texName;
 	if (aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texName) == AI_SUCCESS)
 	{
 		auto fullPath = m_sceneDirectory / texName.C_Str();
-
-		//std::cout << "Texture path:  " << fullPath << "\n";
-
-		
-		//Image texture;
-		//ImageHelpers::CreateTexture(context, fullPath, texture);
+		mat.baseColor = LoadTexture(context, fullPath, outScene);
 	}
 
-
-	return 0;
+	outScene.materials.push_back(mat);
+	return static_cast<uint32_t>(outScene.meshes.size() - 1);
 }
 
-uint32_t dae::GLTFLoader::LoadTexture(const Context& context, aiString path, Scene& outScene)
+uint32_t dae::GLTFLoader::LoadTexture(const Context& context, const std::filesystem::path& path, Scene& outScene)
 {
-	return 0;
+	if (m_textureLookup.contains(path))
+	{
+		return m_textureLookup[path];
+	}
+
+	Image tex;
+	ImageHelpers::CreateTexture(context, path, tex);
+	outScene.textures.push_back(tex);
+
+	uint32_t texIndex = static_cast<uint32_t>(outScene.textures.size() - 1);
+	m_textureLookup[path] = texIndex;
+	return texIndex;
 }
 
-glm::mat4 dae::GLTFLoader::ConvertMatrix(const aiMatrix4x4& mat)
+glm::mat4 dae::GLTFLoader::ConvertMatrix(const aiMatrix4x4& mat) const
 {
 	
 	return glm::mat4{
@@ -167,15 +165,4 @@ glm::mat4 dae::GLTFLoader::ConvertMatrix(const aiMatrix4x4& mat)
 		mat.a3, mat.b3, mat.c3, mat.d3,
 		mat.a4, mat.b4, mat.c4, mat.d4
 	};
-	 
-
-	/*
-	return glm::mat4
-	{
-		mat.a1, mat.a2, mat.a3, mat.a4,
-		mat.b1, mat.b2, mat.b3, mat.b4,
-		mat.c1, mat.c2, mat.c3, mat.c4,
-		mat.d1, mat.d2, mat.d3, mat.d4
-	};
-	*/
 }

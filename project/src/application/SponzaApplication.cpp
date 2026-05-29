@@ -34,6 +34,15 @@ void dae::SponzaApplication::Init()
         contextFactory.Create(&m_window, m_context);
         m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
     }
+    // --- Scene Data -------------------------------
+    {
+        GLTFLoader loader;
+        m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
+        m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
+
+        m_textureImage = m_scene.textures[0];
+    }
+
     // --- Swapchain ----------------------------------
     {
         m_swapchain.Create(m_window, m_context);
@@ -49,17 +58,35 @@ void dae::SponzaApplication::Init()
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
     }
-    // --- DescriptorSetLayout ----------------------
-    {
-        DescriptorSetLayoutBuilder layoutBuilder{};
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_descriptorSetLayout);
+    // --- DescriptorSetLayouts ----------------------
+    
+    DescriptorSetLayoutBuilder layoutBuilder{};
+    
+    //Frame data set
+    layoutBuilder
+        .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+		.Build(m_context, m_frameDataSetLayout);
+    m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
 
-        m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorSetLayout.Destroy(m_context); });
+    //Global data set
+        //Ideally this is split so you don't link the sampler for every image
+		//.AddBinding(0, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+        //.AddBinding(1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
+    layoutBuilder
+		.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
+		.Build(m_context, m_globalDataSetLayout);
+    m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
 
-    }
+    /*
+	layoutBuilder
+        .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
+        .Build(m_context, m_descriptorSetLayout);
+
+    m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorSetLayout.Destroy(m_context); });
+     */
+	
+    
     // --- Graphics Pipeline ------------------------
     {
         Shader vertexShader, fragmentShader;
@@ -67,21 +94,24 @@ void dae::SponzaApplication::Init()
         ShaderLoader shaderLoader = {};
         shaderLoader
             .SetFilename("resources/shaders/sponza.vert.spv")
-            //.SetFilename("resources/shaders/base_shader.vert.spv")
             .Load(m_context, vertexShader);
 
         shaderLoader
-            .SetFilename("resources/shaders/base_shader.frag.spv")
+            .SetFilename("resources/shaders/sponza.frag.spv")
+            //.SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
 
-        GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
+        PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
-            .AddDescriptorSetLayout(m_descriptorSetLayout)
+			.AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+			.AddDescriptorSetLayout(m_globalDataSetLayout)
+			.AddDescriptorSetLayout(m_frameDataSetLayout)
+    	//.AddDescriptorSetLayout(m_descriptorSetLayout)
             .Build(m_context, m_graphicsPipelineLayout);
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
 
-
+        
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
             .SetPipelineLayout(m_graphicsPipelineLayout)
@@ -129,15 +159,6 @@ void dae::SponzaApplication::Init()
         m_applicationDeletionQueue.PushDeletor([&]() {m_sampler.Destroy(m_context); });
     }
 
-    // --- Scene Data -------------------------------
-    {
-        ImageHelpers::CreateTexture(m_context, TEXTURE_PATH, m_textureImage);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_textureImage.Destroy(m_context); });
-
-        GLTFLoader loader;
-        m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
-        m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
-    }
     // --- Uniform Buffers --------------------------
     {
         m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
@@ -156,24 +177,33 @@ void dae::SponzaApplication::Init()
     {
         std::vector<VkDescriptorPoolSize> poolSizes;
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
 
-        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT);
+        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT + 1);
         m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
     }
 
     // --- Descriptor Sets --------------------------
     {
-        m_descriptorSets = m_descriptorPool.Allocate(m_context, m_descriptorSetLayout, MAX_FRAMES_IN_FLIGHT);
+        //global descriptor set
+        m_globalDescriptorSet = m_descriptorPool.Allocate(m_context, m_globalDataSetLayout);
+
+        DescriptorSetWriter globalWriter{};
+        globalWriter
+            .SetTarget(&m_globalDescriptorSet)
+            .WriteImageArray(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_scene.textures, m_sampler)
+			.UpdateTarget(m_context);
+
+
+        m_descriptorSets = m_descriptorPool.Allocate(m_context, m_frameDataSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             DescriptorSetWriter writer = {};
             writer
                 .SetTarget(&m_descriptorSets[i])
-                //.WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(UniformBufferObject))
                 .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
-                .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
+                //.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
                 .UpdateTarget(m_context);
         }
     }
@@ -210,7 +240,7 @@ void dae::SponzaApplication::Update()
     m_timer.Update();
     m_camera.Update(m_timer, m_window);
 
-    UpdateUniformBuffer(m_syncManager.GetCurrentFrameIndex());
+    UpdateViewProjectionUBO(m_syncManager.GetCurrentFrameIndex());
 }
 
 void dae::SponzaApplication::DrawFrame()
@@ -380,7 +410,7 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(commandBuffer.handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+    
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
 
     VkViewport viewport{};
@@ -397,15 +427,12 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     scissor.extent = m_swapchain.extent;
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
 
-    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
 
-    //m_pMesh->RecordDraw(commandBuffer);
-    for (auto& mesh : m_scene.meshes)
-    {
-	    mesh.RecordDraw(commandBuffer);
-    }
-    //m_scene.meshes[0].RecordDraw(commandBuffer);
+    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
+
+    m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
 
     vkCmdEndRenderPass(commandBuffer.handle);
 
@@ -447,36 +474,12 @@ bool dae::SponzaApplication::HasStencilComponent(VkFormat format) const
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void dae::SponzaApplication::UpdateUniformBuffer(uint32_t currentImage)
+void dae::SponzaApplication::UpdateViewProjectionUBO(uint32_t currentImage)
 {
-    /*
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-
-    glm::mat4 GLTF_TO_ENGINE(
-        1, 0, 0, 0,
-        0, 0, 1, 0,
-        0, -1, 0, 0,
-        0, 0, 0, 1
-    );
-
-    UniformBufferObject ubo{};
-    //ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), glm::vec3(1.f, 0.f, 0.f));
-    //ubo.model = GLTF_TO_ENGINE;
-    ubo.model = m_scene.nodes[m_scene.rootNode].transform;
-	ubo.view = m_camera.CalculateViewMatrix();
-    ubo.proj = m_camera.projectionMatrix;
-
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-	*/
-    
-    
-	ViewProjectionUBO ubo{};
-    ubo.view = m_camera.CalculateViewMatrix();
-    ubo.proj = m_camera.projectionMatrix;
+    ViewProjectionUBO ubo{
+        m_camera.CalculateViewMatrix(),
+        m_camera.projectionMatrix
+	};
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
      

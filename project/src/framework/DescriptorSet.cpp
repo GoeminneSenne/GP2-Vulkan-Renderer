@@ -60,6 +60,34 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 	return *this;
 }
 
+dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImageArray(uint32_t binding, VkImageLayout layout, const std::vector<Image>& images,
+	const Sampler& sampler)
+{
+	m_imageInfos.resize(images.size());
+
+	for (size_t idx{}; idx < images.size(); ++idx)
+	{
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.sampler = sampler.handle;
+		imageInfo.imageView = images[idx].view;
+		imageInfo.imageLayout = layout;
+	
+		m_imageInfos[idx] = imageInfo;
+	}
+
+	VkWriteDescriptorSet write{};
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = m_target->set;
+	write.dstBinding = binding;
+	write.dstArrayElement = 0;
+	write.descriptorType = m_target->pLayout->bindings[binding].type;
+	write.descriptorCount = (uint32_t)images.size();
+	write.pImageInfo = m_imageInfos.data();
+
+	m_writes.push_back(write);
+	return *this;
+}
+
 void dae::DescriptorSetWriter::UpdateTarget(const Context& context) const
 {
 	vkUpdateDescriptorSets(context.logicalDevice.handle, static_cast<uint32_t>(m_writes.size()), m_writes.data(), 0, nullptr);
@@ -75,7 +103,7 @@ void dae::DescriptorSetLayoutBuilder::Build(const Context& context, DescriptorSe
 		layoutBinding.binding = binding.binding;
 		layoutBinding.descriptorType = binding.type;
 		layoutBinding.stageFlags = binding.stages;
-		layoutBinding.descriptorCount = 1;
+		layoutBinding.descriptorCount = binding.count;
 		layoutBinding.pImmutableSamplers = nullptr;
 
 		layoutBindings.push_back(layoutBinding);
@@ -123,6 +151,21 @@ void dae::DescriptorPool::Destroy(const Context& context) const
 	{
 		vkDestroyDescriptorPool(context.logicalDevice.handle, m_pool, nullptr);
 	}
+}
+
+dae::DescriptorSet dae::DescriptorPool::Allocate(const Context& context, DescriptorSetLayout& layout) const
+{
+	VkDescriptorSetAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	allocInfo.descriptorPool = m_pool;
+	allocInfo.descriptorSetCount = 1;
+	allocInfo.pSetLayouts = &layout.layout;
+
+	DescriptorSet set{};
+	vkAllocateDescriptorSets(context.logicalDevice.handle, &allocInfo, &set.set);
+	set.pLayout = &layout;
+
+	return set;
 }
 
 std::vector<dae::DescriptorSet> dae::DescriptorPool::Allocate(const Context& context, DescriptorSetLayout& layout, uint32_t count) const

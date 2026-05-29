@@ -17,6 +17,7 @@ set(FRAMEWORK_SOURCES
 	src/framework/CommandBuffer.cpp
 	src/framework/DescriptorSet.cpp
 	src/framework/GraphicsPipeline.cpp
+	src/framework/PipelineLayout.cpp
 	src/framework/SwapchainSupportDetails.cpp
 	src/framework/Framebuffer.cpp
 	src/framework/Buffer.cpp

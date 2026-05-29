@@ -72,7 +72,7 @@ namespace dae
         VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
         VkFormat FindDepthFormat() const;
         bool HasStencilComponent(VkFormat format) const;
-        void UpdateUniformBuffer(uint32_t currentImage);
+        void UpdateViewProjectionUBO(uint32_t currentImage);
 
         Window m_window{};
         Timer m_timer{};
@@ -83,8 +83,11 @@ namespace dae
         Swapchain m_swapchain{};
 
         RenderPass m_renderPass{};
-        DescriptorSetLayout m_descriptorSetLayout{};
+        //DescriptorSetLayout m_descriptorSetLayout{};
+        DescriptorSetLayout m_frameDataSetLayout{};
+        DescriptorSetLayout m_globalDataSetLayout{};
         DescriptorPool m_descriptorPool;
+        DescriptorSet m_globalDescriptorSet{};
         std::vector<DescriptorSet> m_descriptorSets;
         PipelineLayout m_graphicsPipelineLayout{};
         GraphicsPipeline m_graphicsPipeline{};

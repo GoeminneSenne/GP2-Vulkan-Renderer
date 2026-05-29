@@ -38,13 +38,15 @@ namespace dae
 		DescriptorSetWriter& SetTarget(DescriptorSet* pTarget);
 		DescriptorSetWriter& WriteBuffer(uint32_t binding, const Buffer& buffer, VkDeviceSize offset, VkDeviceSize range);
 		DescriptorSetWriter& WriteImage(uint32_t binding, VkImageLayout layout, const Image& image, const Sampler& sampler);
+		DescriptorSetWriter& WriteImageArray(uint32_t binding, VkImageLayout layout, const std::vector<Image>& images, const Sampler& sampler);
 
 		void UpdateTarget(const Context& context) const;
 
 	private:
 		DescriptorSet* m_target = nullptr;
 		VkDescriptorBufferInfo m_bufferInfo{};
-		VkDescriptorImageInfo m_imageInfo{};
+		VkDescriptorImageInfo m_imageInfo{}; //Keeping for single Writes, should be removed in end result
+		std::vector<VkDescriptorImageInfo> m_imageInfos{};
 		std::vector<VkWriteDescriptorSet> m_writes;
 	};
 
@@ -65,6 +67,7 @@ namespace dae
 			const std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t maxSets);
 		void Destroy(const Context& context) const;
 
+		DescriptorSet Allocate(const Context& context, DescriptorSetLayout& layout) const;
 		std::vector<DescriptorSet> Allocate(const Context& context, DescriptorSetLayout& layout, uint32_t count) const;
 	private:
 		VkDescriptorPool m_pool = VK_NULL_HANDLE;

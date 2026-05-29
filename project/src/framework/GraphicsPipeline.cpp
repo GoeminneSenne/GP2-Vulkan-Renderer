@@ -103,6 +103,8 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
 		"failed to create graphics pipeline!"
 	);
+
+	pipeline.layout = m_layout;
 }
 
 dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::SetPipelineLayout(const PipelineLayout& layout)
@@ -169,28 +171,5 @@ dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::AddVertexInputAttrib
 	const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 {
 	m_attributeDescriptions.insert(m_attributeDescriptions.end(), attributeDescriptions.begin(), attributeDescriptions.end());
-	return *this;
-}
-
-void dae::GraphicsPipelineLayoutBuilder::Build(const Context& context,
-	PipelineLayout& pipelineLayout)
-{
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(m_setLayouts.size());
-	pipelineLayoutInfo.pSetLayouts = m_setLayouts.data();
-	pipelineLayoutInfo.pushConstantRangeCount = 0;
-	pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-	LOG_VULKAN_ERROR(
-		vkCreatePipelineLayout(context.logicalDevice.handle, &pipelineLayoutInfo, nullptr, &pipelineLayout.handle),
-		"failed to create pipeline layout!"
-	);
-}
-
-dae::GraphicsPipelineLayoutBuilder& dae::GraphicsPipelineLayoutBuilder::AddDescriptorSetLayout(
-	DescriptorSetLayout setLayout)
-{
-	m_setLayouts.push_back(setLayout.layout);
 	return *this;
 }

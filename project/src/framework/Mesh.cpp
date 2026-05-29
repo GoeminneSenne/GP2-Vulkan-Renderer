@@ -10,6 +10,9 @@
 
 #include "Vertex.h"
 #include "Context.h"
+#include "GpuData.h"
+#include "GraphicsPipeline.h"
+#include "PipelineLayout.h"
 
 
 void dae::Mesh::LoadObj(const Context& context, const std::string& path)
@@ -118,17 +121,41 @@ void dae::Mesh::Destroy(const Context& context)
 
 void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 {
-	VkBuffer buffer = vertexBuffer.handle;
 	VkDeviceSize offset = 0;
 
-	vkCmdBindVertexBuffers(command.handle, 0, 1, &buffer, &offset);
+	vkCmdBindVertexBuffers(command.handle, 0, 1, &vertexBuffer.handle, &offset);
 	vkCmdBindIndexBuffer(command.handle, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
 	vkCmdDrawIndexed(command.handle, indexCount, 1, 0, 0, 0);
 }
 
-void dae::Node::RecordDraw(const CommandBuffer& command) const
+void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform) const
 {
-	
+	PushConstants modelPC{ transform, textureIndex };
+	vkCmdPushConstants(command.handle, pipeline.layout->handle, VK_SHADER_STAGE_VERTEX_BIT |VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(modelPC), &modelPC);
+
+	RecordDraw(command);
+}
+
+
+void dae::Scene::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline) const
+{
+	DrawNode(command, nodes[rootNode], pipeline, glm::mat4(1));
+}
+
+void dae::Scene::DrawNode(const CommandBuffer& command, const Node& node, const GraphicsPipeline& pipeline,
+                          const glm::mat4& parentTransform) const
+{
+	glm::mat4 globalTransform = parentTransform * node.transform;
+
+	for (const auto& meshIndex : node.meshIndices)
+	{
+		meshes[meshIndex].RecordDraw(command, pipeline, globalTransform);
+	}
+
+	for (const auto& childIndex : node.children)
+	{
+		DrawNode(command, nodes[childIndex], pipeline, globalTransform);
+	}
 }
 
 void dae::Scene::Destroy(const Context& context)

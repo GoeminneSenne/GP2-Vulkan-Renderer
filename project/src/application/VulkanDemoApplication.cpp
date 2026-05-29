@@ -72,7 +72,7 @@ void dae::VulkanDemoApplication::Init()
             .SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
 
-        GraphicsPipelineLayoutBuilder pipelineLayoutBuilder = {};
+        PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
             .AddDescriptorSetLayout(m_descriptorSetLayout)
             .Build(m_context, m_graphicsPipelineLayout);

@@ -13,6 +13,7 @@ namespace dae
 	struct GraphicsPipeline final
 	{
 		VkPipeline handle = VK_NULL_HANDLE;
+		PipelineLayout const * layout = nullptr;
 
 		void Destroy(const Context& context) const;
 	};
@@ -45,21 +46,8 @@ namespace dae
 		bool m_depthTestEnable{ false };
 		bool m_depthWriteEnable{ false };
 		VkCompareOp m_depthCompareOp{};
-		//Multisampling
+		//Multisampling?
 		std::vector<VkVertexInputBindingDescription> m_bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> m_attributeDescriptions;
-	};
-
-	class GraphicsPipelineLayoutBuilder final
-	{
-	public:
-		void Build(const Context& context, PipelineLayout& pipelineLayout);
-
-		GraphicsPipelineLayoutBuilder& AddDescriptorSetLayout(DescriptorSetLayout setLayout);
-		//GraphicsPipelineLayoutBuilder& AddPushConstant(VkPushConstantRange pushConstant);
-
-	private:
-		std::vector<VkDescriptorSetLayout> m_setLayouts;
-		std::vector<VkPushConstantRange> m_pushConstants; //TODO
 	};
 }
