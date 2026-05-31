@@ -46,9 +46,6 @@ namespace dae
 	struct Node
 	{
 		glm::mat4 transform;
-		std::vector<Mesh*> meshes;
-		//std::vector<Node*> children;
-
 		std::vector<uint32_t> meshIndices;
 		std::vector<uint32_t> children;
 	};
@@ -61,8 +58,6 @@ namespace dae
 		std::vector<Node> nodes;
 
 		uint32_t rootNode = 0;
-
-		Node* root = nullptr;
 
 		void RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline) const;
 		void DrawNode(const CommandBuffer& command, const Node& node, const GraphicsPipeline& pipeline, const glm::mat4& parentTransform) const;

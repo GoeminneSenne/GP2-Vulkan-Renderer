@@ -69,23 +69,12 @@ void dae::SponzaApplication::Init()
     m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
 
     //Global data set
-        //Ideally this is split so you don't link the sampler for every image
-		//.AddBinding(0, VK_DESCRIPTOR_TYPE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
-        //.AddBinding(1, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
     layoutBuilder
+        //Ideally this is split so you don't link the sampler for every image
 		.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
 		.Build(m_context, m_globalDataSetLayout);
     m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
 
-    /*
-	layoutBuilder
-        .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
-        .Build(m_context, m_descriptorSetLayout);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorSetLayout.Destroy(m_context); });
-     */
-	
     
     // --- Graphics Pipeline ------------------------
     {
@@ -106,7 +95,6 @@ void dae::SponzaApplication::Init()
 			.AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.AddDescriptorSetLayout(m_globalDataSetLayout)
 			.AddDescriptorSetLayout(m_frameDataSetLayout)
-    	//.AddDescriptorSetLayout(m_descriptorSetLayout)
             .Build(m_context, m_graphicsPipelineLayout);
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
