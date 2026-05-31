@@ -152,6 +152,66 @@ namespace dae
 			image.layout = newLayout;
 		}
 
+		inline void TransitionImageLayout2(const CommandBuffer& commandBuffer, Image& image,
+			VkPipelineStageFlags2 sourceStage, VkPipelineStageFlags2 destinationStage,
+			VkAccessFlags2 srcAccessMask, VkAccessFlags2 dstAccessMask,
+			VkImageLayout oldLayout, VkImageLayout newLayout)
+		{
+			VkImageMemoryBarrier2 barrier2{};
+			barrier2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+			barrier2.srcStageMask = sourceStage;
+			barrier2.srcAccessMask = srcAccessMask;
+			barrier2.dstStageMask = destinationStage;
+			barrier2.dstAccessMask = dstAccessMask;
+			barrier2.oldLayout = oldLayout;
+			barrier2.newLayout = newLayout;
+			barrier2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier2.image = image.image;
+			barrier2.subresourceRange.aspectMask = image.aspectMask;
+			barrier2.subresourceRange.baseMipLevel = 0;
+			barrier2.subresourceRange.levelCount = image.mipLevels;
+			barrier2.subresourceRange.baseArrayLayer = 0;
+			barrier2.subresourceRange.layerCount = 1;
+
+			VkDependencyInfo dependencyInfo{};
+			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+			dependencyInfo.imageMemoryBarrierCount = 1;
+			dependencyInfo.pImageMemoryBarriers = &barrier2;
+
+			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
+
+			image.layout = newLayout;
+
+			/*
+			VkImageMemoryBarrier barrier{};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = oldLayout;
+			barrier.newLayout = newLayout;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = image.image;
+			barrier.subresourceRange.aspectMask = image.aspectMask;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = image.mipLevels;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.srcAccessMask = srcAccessMask;
+			barrier.dstAccessMask = dstAccessMask;
+
+			vkCmdPipelineBarrier(
+				commandBuffer.handle,
+				sourceStage, destinationStage,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
+			image.layout = newLayout;
+			*/
+		}
+
 		inline void RecordCopyFromBuffer(const CommandBuffer& commandBuffer, const Buffer& source, const Image& image)
 		{
 			VkBufferImageCopy region{};

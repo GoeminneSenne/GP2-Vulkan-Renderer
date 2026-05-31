@@ -1,11 +1,21 @@
 #pragma once
 #include <iostream>
+
+//#define VULKAN_DEMO_APP
+#define SPONZA_APP
+
+#ifdef VULKAN_DEMO_APP
+#include "VulkanDemoApplication.h"
+typedef dae::VulkanDemoApplication application;
+#endif
+
+#ifdef SPONZA_APP
 #include "SponzaApplication.h"
-//#include "VulkanDemoApplication.h"
+typedef dae::SponzaApplication application;
+#endif
 
 int main() {
-    dae::SponzaApplication app{};
-    //dae::VulkanDemoApplication app{};
+    application app{};
 
     try
     {

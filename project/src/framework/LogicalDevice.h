@@ -34,7 +34,7 @@ namespace dae
 	private:
 		Queue InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const;
 
-		VkPhysicalDeviceFeatures deviceFeatures{};
+		VkPhysicalDeviceFeatures features10{};
 		std::vector<const char*> deviceExtensions{};
 		std::vector<const char*> validationLayers{};
 		bool useValidation{ false };

@@ -37,19 +37,6 @@ const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" }
 
 const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-
- 
-/*
-struct UniformBufferObject
-{
-    alignas(16) glm::mat4 model;
-    alignas(16) glm::mat4 view;
-    alignas(16) glm::mat4 proj;
-};
- */
-
-
-
 namespace dae
 {
 	class SponzaApplication final
@@ -83,12 +70,11 @@ namespace dae
         Swapchain m_swapchain{};
 
         RenderPass m_renderPass{};
-        //DescriptorSetLayout m_descriptorSetLayout{};
         DescriptorSetLayout m_frameDataSetLayout{};
         DescriptorSetLayout m_globalDataSetLayout{};
         DescriptorPool m_descriptorPool;
         DescriptorSet m_globalDescriptorSet{};
-        std::vector<DescriptorSet> m_descriptorSets;
+        std::vector<DescriptorSet> m_frameDescriptorSets;
         PipelineLayout m_graphicsPipelineLayout{};
         GraphicsPipeline m_graphicsPipeline{};
 
@@ -103,7 +89,8 @@ namespace dae
 
         Image m_textureImage{};
         Sampler m_sampler{};
-        Image m_depthImage{};
+        
+		//Image m_depthImage{};
 
         DeletionQueue m_applicationDeletionQueue{};
 	};

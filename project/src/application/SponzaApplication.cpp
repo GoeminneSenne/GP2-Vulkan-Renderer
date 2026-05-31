@@ -195,13 +195,13 @@ void dae::SponzaApplication::Init()
 			.UpdateTarget(m_context);
 
 
-        m_descriptorSets = m_descriptorPool.Allocate(m_context, m_frameDataSetLayout, MAX_FRAMES_IN_FLIGHT);
+        m_frameDescriptorSets = m_descriptorPool.Allocate(m_context, m_frameDataSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             DescriptorSetWriter writer = {};
             writer
-                .SetTarget(&m_descriptorSets[i])
+                .SetTarget(&m_frameDescriptorSets[i])
                 .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
                 //.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
                 .UpdateTarget(m_context);
@@ -430,7 +430,7 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
 
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_descriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
     m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
 
