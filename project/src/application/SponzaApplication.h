@@ -90,7 +90,7 @@ namespace dae
         Image m_textureImage{};
         Sampler m_sampler{};
         
-		//Image m_depthImage{};
+		Image m_depthImage{};
 
         DeletionQueue m_applicationDeletionQueue{};
 	};
