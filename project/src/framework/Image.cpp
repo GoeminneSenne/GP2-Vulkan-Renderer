@@ -53,7 +53,7 @@ void dae::ImageBuilder::Build(const Context& context, Image& image) const
 	allocInfo.flags = m_allocFlags;
 
 	LOG_VULKAN_ERROR(
-		vmaCreateImage(context.allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, nullptr),
+		vmaCreateImage(context.allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, &image.allocInfo),
 		"failed to create image!"
 	);
 

@@ -14,6 +14,7 @@ namespace dae
 
 		VkImage image = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
+		VmaAllocationInfo allocInfo = {};
 		VkImageView view = VK_NULL_HANDLE;
 		VkFormat format = VK_FORMAT_UNDEFINED;
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
