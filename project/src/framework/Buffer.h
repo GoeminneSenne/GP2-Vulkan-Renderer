@@ -22,7 +22,5 @@ namespace dae
 		void CreateVertex(const Context& context, VkDeviceSize size);
 		void CreateIndex(const Context& context, VkDeviceSize size);
 		void CreateUniform(const Context& context, VkDeviceSize size);
-
-		void UploadData(const Context& context, const void* data, VkDeviceSize size);
 	};
 }

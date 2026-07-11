@@ -8,6 +8,7 @@
 #include "../../inc/stb_image.h"
 
 #include "Buffer.h"
+#include "BufferHelpers.h"
 #include "CommandBuffer.h"
 #include "Common.h"
 #include "Context.h"
@@ -182,53 +183,6 @@ namespace dae
 			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
 
 			image.layout = newLayout;
-
-			/*
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.oldLayout = oldLayout;
-			barrier.newLayout = newLayout;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = image.image;
-			barrier.subresourceRange.aspectMask = image.aspectMask;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = image.mipLevels;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
-			barrier.srcAccessMask = srcAccessMask;
-			barrier.dstAccessMask = dstAccessMask;
-
-			vkCmdPipelineBarrier(
-				commandBuffer.handle,
-				sourceStage, destinationStage,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			image.layout = newLayout;
-			*/
-		}
-
-		inline void RecordCopyFromBuffer(const CommandBuffer& commandBuffer, const Buffer& source, const Image& image)
-		{
-			VkBufferImageCopy region{};
-			region.bufferOffset = 0;
-			region.bufferRowLength = 0;
-			region.bufferImageHeight = 0;
-
-			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			region.imageSubresource.mipLevel = 0;
-			region.imageSubresource.baseArrayLayer = 0;
-			region.imageSubresource.layerCount = 1;
-
-			region.imageOffset = { 0, 0, 0 };
-			region.imageExtent = { image.extent.width, image.extent.height, 1 };
-
-			vkCmdCopyBufferToImage(commandBuffer.handle, source.handle, image.image,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		}
 
 		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
@@ -242,7 +196,7 @@ namespace dae
 
 			Buffer stagingBuffer;
 			stagingBuffer.CreateStaging(context, imageSize);
-			stagingBuffer.UploadData(context, pixels, imageSize);
+			BufferHelpers::UploadData(context, stagingBuffer, pixels, imageSize);
 			stbi_image_free(pixels);
 
 			uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
@@ -268,7 +222,7 @@ namespace dae
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
 			commandBuffer = context.commandPool.BeginSingleTimeCommand();
-			RecordCopyFromBuffer(commandBuffer, stagingBuffer, image);
+			BufferHelpers::CopyBufferToImage(commandBuffer, stagingBuffer, image);
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
 			stagingBuffer.Destroy(context);

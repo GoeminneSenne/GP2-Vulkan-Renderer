@@ -84,7 +84,7 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 
 		Buffer staging;
 		staging.CreateStaging(context, verticesSize);
-		staging.UploadData(context, vertices.data(), verticesSize);
+		BufferHelpers::UploadData(context, staging, vertices.data(), verticesSize);
 
 		vertexBuffer.CreateVertex(context, verticesSize);
 
@@ -101,7 +101,7 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 
 		Buffer staging;
 		staging.CreateStaging(context, indicesSize);
-		staging.UploadData(context, indices.data(), indicesSize);
+		BufferHelpers::UploadData(context, staging, indices.data(), indicesSize);
 
 		indexBuffer.CreateIndex(context, indicesSize);
 

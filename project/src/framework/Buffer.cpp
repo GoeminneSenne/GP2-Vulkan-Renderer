@@ -55,12 +55,3 @@ void dae::Buffer::CreateUniform(const Context& context, VkDeviceSize size)
 	Create(context, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 }
-
-
-void dae::Buffer::UploadData(const Context& context, const void* data, VkDeviceSize size)
-{
-	void* mapped;
-	vmaMapMemory(context.allocator, allocation, &mapped);
-	std::memcpy(mapped, data, static_cast<size_t>(size));
-	vmaUnmapMemory(context.allocator, allocation);
-}
