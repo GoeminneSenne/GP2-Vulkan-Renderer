@@ -27,6 +27,6 @@ namespace dae
 
 	private:
 		std::vector<VkDescriptorSetLayout> m_setLayouts;
-		std::vector<VkPushConstantRange> m_pushConstants; //TODO
+		std::vector<VkPushConstantRange> m_pushConstants;
 	};
 }

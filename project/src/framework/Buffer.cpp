@@ -56,12 +56,6 @@ void dae::Buffer::CreateUniform(const Context& context, VkDeviceSize size)
 		VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 }
 
-void dae::Buffer::RecordCopyFrom(const CommandBuffer& commandBuffer, const Buffer& source, VkDeviceSize size)
-{
-	VkBufferCopy copyRegion{};
-	copyRegion.size = size;
-	vkCmdCopyBuffer(commandBuffer.handle, source.handle, this->handle, 1, &copyRegion);
-}
 
 void dae::Buffer::UploadData(const Context& context, const void* data, VkDeviceSize size)
 {

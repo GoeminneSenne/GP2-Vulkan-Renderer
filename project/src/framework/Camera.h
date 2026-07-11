@@ -8,6 +8,7 @@
 
 namespace dae
 {
+	//TODO: make class
 	struct Camera final
 	{
 		Camera() = default;

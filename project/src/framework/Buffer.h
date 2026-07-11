@@ -23,7 +23,6 @@ namespace dae
 		void CreateIndex(const Context& context, VkDeviceSize size);
 		void CreateUniform(const Context& context, VkDeviceSize size);
 
-		void RecordCopyFrom(const CommandBuffer& commandBuffer, const Buffer& source, VkDeviceSize size);
 		void UploadData(const Context& context, const void* data, VkDeviceSize size);
 	};
 }

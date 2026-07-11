@@ -13,6 +13,7 @@
 #include "GpuData.h"
 #include "GraphicsPipeline.h"
 #include "PipelineLayout.h"
+#include "BufferHelpers.h"
 
 
 void dae::Mesh::LoadObj(const Context& context, const std::string& path)
@@ -88,7 +89,7 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 		vertexBuffer.CreateVertex(context, verticesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
-		vertexBuffer.RecordCopyFrom(command, staging, verticesSize);
+		BufferHelpers::CopyBuffer(command, staging, vertexBuffer, verticesSize);
 		context.commandPool.EndSingleTimeCommand(command);
 
 		staging.Destroy(context);
@@ -98,17 +99,17 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 	{
 		VkDeviceSize indicesSize = sizeof(indices[0]) * indexCount;
 
-		Buffer stagingBuffer;
-		stagingBuffer.CreateStaging(context, indicesSize);
-		stagingBuffer.UploadData(context, indices.data(), indicesSize);
+		Buffer staging;
+		staging.CreateStaging(context, indicesSize);
+		staging.UploadData(context, indices.data(), indicesSize);
 
 		indexBuffer.CreateIndex(context, indicesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
-		indexBuffer.RecordCopyFrom(command, stagingBuffer, indicesSize);
+		BufferHelpers::CopyBuffer(command, staging, indexBuffer, indicesSize);
 		context.commandPool.EndSingleTimeCommand(command);
 
-		stagingBuffer.Destroy(context);
+		staging.Destroy(context);
 	}
 }
 

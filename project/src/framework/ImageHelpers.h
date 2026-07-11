@@ -243,7 +243,6 @@ namespace dae
 			Buffer stagingBuffer;
 			stagingBuffer.CreateStaging(context, imageSize);
 			stagingBuffer.UploadData(context, pixels, imageSize);
-
 			stbi_image_free(pixels);
 
 			uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
