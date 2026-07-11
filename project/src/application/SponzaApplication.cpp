@@ -156,7 +156,7 @@ void dae::SponzaApplication::Init()
         {
             //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
             VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
-            m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
+            BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize),
 
             vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
         }

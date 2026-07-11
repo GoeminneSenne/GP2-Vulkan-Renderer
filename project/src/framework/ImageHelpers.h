@@ -195,7 +195,7 @@ namespace dae
 				throw std::runtime_error("failed to load image: " + path);
 
 			Buffer stagingBuffer;
-			stagingBuffer.CreateStaging(context, imageSize);
+			BufferHelpers::CreateStaging(context, stagingBuffer, imageSize);
 			BufferHelpers::UploadData(context, stagingBuffer, pixels, imageSize);
 			stbi_image_free(pixels);
 

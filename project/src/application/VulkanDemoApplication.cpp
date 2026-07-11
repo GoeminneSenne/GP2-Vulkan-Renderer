@@ -145,7 +145,7 @@ void dae::VulkanDemoApplication::Init()
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-            m_uniformBuffers[i].CreateUniform(m_context, bufferSize);
+            BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize);
 
             vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
         }

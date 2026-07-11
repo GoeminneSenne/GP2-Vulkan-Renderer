@@ -83,10 +83,10 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 
 
 		Buffer staging;
-		staging.CreateStaging(context, verticesSize);
+		BufferHelpers::CreateStaging(context, staging, verticesSize);
 		BufferHelpers::UploadData(context, staging, vertices.data(), verticesSize);
 
-		vertexBuffer.CreateVertex(context, verticesSize);
+		BufferHelpers::CreateVertex(context, vertexBuffer, verticesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
 		BufferHelpers::CopyBuffer(command, staging, vertexBuffer, verticesSize);
@@ -100,10 +100,10 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 		VkDeviceSize indicesSize = sizeof(indices[0]) * indexCount;
 
 		Buffer staging;
-		staging.CreateStaging(context, indicesSize);
+		BufferHelpers::CreateStaging(context, staging, indicesSize);
 		BufferHelpers::UploadData(context, staging, indices.data(), indicesSize);
 
-		indexBuffer.CreateIndex(context, indicesSize);
+		BufferHelpers::CreateIndex(context, indexBuffer, indicesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
 		BufferHelpers::CopyBuffer(command, staging, indexBuffer, indicesSize);
