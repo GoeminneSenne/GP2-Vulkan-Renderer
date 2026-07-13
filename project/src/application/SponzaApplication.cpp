@@ -12,6 +12,7 @@
 #include <framework/Framebuffer.h>
 #include <framework/ImageHelpers.h>
 #include <framework/GLTFLoader.h>
+#include <framework/DepthHelpers.h>
 
 
 void dae::SponzaApplication::Init()
@@ -53,7 +54,7 @@ void dae::SponzaApplication::Init()
         RenderPassBuilder renderPassBuilder = {};
         renderPassBuilder
             .AddColorAttachment(m_swapchain.imageFormat)
-            .SetDepthAttachment(FindDepthFormat())
+            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
             .Build(m_context, m_renderPass);
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
@@ -75,11 +76,9 @@ void dae::SponzaApplication::Init()
 		.Build(m_context, m_globalDataSetLayout);
     m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
 
-    
-    // --- Graphics Pipeline ------------------------
+    // --- Shaders ----------------------------------
+    Shader vertexShader, fragmentShader;
     {
-        Shader vertexShader, fragmentShader;
-
         ShaderLoader shaderLoader = {};
         shaderLoader
             .SetFilename("resources/shaders/sponza.vert.spv")
@@ -89,6 +88,11 @@ void dae::SponzaApplication::Init()
             .SetFilename("resources/shaders/sponza.frag.spv")
             //.SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
+    }
+    
+    // --- Graphics Pipeline ------------------------
+    {
+
 
         PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
@@ -123,8 +127,8 @@ void dae::SponzaApplication::Init()
     }
     // --- Depth Resources --------------------------
     {
-        CreateDepthResources();
-
+	    DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context);});
     }
     // --- Framebuffers ------------------------------
     {
@@ -319,40 +323,6 @@ void dae::SponzaApplication::Cleanup()
 }
 
 
-void dae::SponzaApplication::CreateDepthResources()
-{
-    VkFormat depthFormat = FindDepthFormat();
-
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (HasStencilComponent(depthFormat))
-    {
-        aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-
-    ImageBuilder imageBuilder = {};
-    imageBuilder
-        .SetWidth(m_swapchain.extent.width)
-        .SetHeight(m_swapchain.extent.height)
-        .SetMipLevels(1)
-        .SetFormat(depthFormat)
-        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-        .SetUsageFlags(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-        .SetAspectMask(aspectMask)
-        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-        .SetAllocFlags(0)
-        .Build(m_context, m_depthImage);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context); });
-
-
-    CommandBuffer commandBuffer = m_context.commandPool.BeginSingleTimeCommand();
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_depthImage,
-        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-        0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-    m_context.commandPool.EndSingleTimeCommand(commandBuffer);
-}
-
 void dae::SponzaApplication::CleanupSwapchain()
 {
     m_depthImage.Destroy(m_context);
@@ -373,7 +343,7 @@ void dae::SponzaApplication::RecreateSwapchain()
     CleanupSwapchain();
 
     m_swapchain.Create(m_window, m_context);
-    CreateDepthResources();
+    DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
     SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
 
     //Todo add RenderFinishedSemaphores reconstruction in SyncManager
@@ -425,41 +395,6 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     vkCmdEndRenderPass(commandBuffer.handle);
 
     commandBuffer.End();
-}
-
-VkFormat dae::SponzaApplication::FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling,
-    VkFormatFeatureFlags features) const
-{
-    for (VkFormat format : candidates)
-    {
-        VkFormatProperties properties;
-        vkGetPhysicalDeviceFormatProperties(m_context.physicalDevice.handle, format, &properties);
-
-        if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features)
-        {
-            return format;
-        }
-        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features)
-        {
-            return format;
-        }
-    }
-
-    throw std::runtime_error("failed to find supported format!");
-}
-
-VkFormat dae::SponzaApplication::FindDepthFormat() const
-{
-    return FindSupportedFormat(
-        { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
-    );
-}
-
-bool dae::SponzaApplication::HasStencilComponent(VkFormat format) const
-{
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
 void dae::SponzaApplication::UpdateViewProjectionUBO(uint32_t currentImage)

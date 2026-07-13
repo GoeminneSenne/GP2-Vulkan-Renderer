@@ -50,15 +50,9 @@ namespace dae
         void Cleanup();
 
     private:
-        void CreateDepthResources();
-
         void CleanupSwapchain();
         void RecreateSwapchain();
         void RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex);
-
-        VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
-        VkFormat FindDepthFormat() const;
-        bool HasStencilComponent(VkFormat format) const;
         void UpdateViewProjectionUBO(uint32_t currentImage);
 
         Window m_window{};
