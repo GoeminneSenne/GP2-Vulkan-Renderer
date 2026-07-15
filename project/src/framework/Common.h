@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <functional>
+#include <iostream>
 #include <ranges>
 #include <stdexcept>
 
@@ -20,6 +21,17 @@ constexpr static bool ENABLE_VALIDATION = false;
 #else
 constexpr static bool ENABLE_VALIDATION = true;
 #endif
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData)
+{
+    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+    return VK_FALSE;
+}
 
 class DeletionQueue final
 {
