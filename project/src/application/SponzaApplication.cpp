@@ -321,14 +321,7 @@ void dae::SponzaApplication::Cleanup()
     }
 
     m_resizeDeletionQueue.Flush();
-
     m_applicationDeletionQueue.Flush();
-}
-
-void dae::SponzaApplication::CleanupSwapchain()
-{
-    m_depthImage.Destroy(m_context);
-    m_swapchain.Destroy(m_context);
 }
 
 void dae::SponzaApplication::HandleResize()
@@ -365,12 +358,16 @@ void dae::SponzaApplication::RecreateSwapchain()
 
     vkDeviceWaitIdle(m_context.logicalDevice.handle);
 
-    CleanupSwapchain();
+    m_resizeDeletionQueue.Flush();
 
     m_context.physicalDevice.swapchainSupport = vkUtils::QuerySwapChainSupport(m_context.instance, m_context.physicalDevice.handle);
 
     m_swapchain.Create(m_window, m_context);
+    m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context);});
+
     DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
+    m_resizeDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context);});
+
     SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
 
     m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
