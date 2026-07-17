@@ -7,6 +7,7 @@
 #include "SwapchainSupportDetails.h"
 #include "ImageHelpers.h"
 #include "SwapchainHelpers.h"
+#include "Window.h"
 
 void dae::Swapchain::Create(const Window& window, const Context& context)
 {
@@ -74,6 +75,9 @@ void dae::Swapchain::Create(const Window& window, const Context& context)
 
 	this->imageFormat = surfaceFormat.format;
 	this->extent = extent;
+
+	std::cout << "Swapchain extent: " << this->extent.width << "\t" << this->extent.height << "\n";
+	std::cout << "GLFW: " << window.width << "\t" << window.height << "\n";
 }
 
 void dae::Swapchain::Destroy(const Context& context)

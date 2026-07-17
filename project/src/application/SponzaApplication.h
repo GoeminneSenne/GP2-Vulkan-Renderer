@@ -50,6 +50,8 @@ namespace dae
         void Cleanup();
 
     private:
+
+        void HandleResize();
         void CleanupSwapchain();
         void RecreateSwapchain();
         void RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex);
@@ -87,5 +89,6 @@ namespace dae
 		Image m_depthImage{};
 
         DeletionQueue m_applicationDeletionQueue{};
+        DeletionQueue m_resizeDeletionQueue{};
 	};
 }

@@ -26,7 +26,7 @@ void dae::Window::InitWindow(int width, int height, const std::string& title)
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 	glfwSetWindowUserPointer(window, this);
@@ -36,5 +36,7 @@ void dae::Window::InitWindow(int width, int height, const std::string& title)
 void dae::Window::FramebufferResizeCallback(GLFWwindow* glfwWindow, int width, int height)
 {
 	auto window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
+	window->width = width;
+	window->height = height;
 	window->wasResized = true;
 }
