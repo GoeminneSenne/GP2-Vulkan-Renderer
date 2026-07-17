@@ -58,6 +58,19 @@ void dae::SyncManager::Destroy(const Context& context)
 	}
 }
 
+void dae::SyncManager::RecreateRenderFinishedSemaphores(const Context& context, uint32_t swapchainImageCount)
+{
+	for (auto& semaphore : m_renderFinishedSemaphores)
+	{
+		semaphore.Destroy(context);
+	}
+
+	for (size_t idx{}; idx < swapchainImageCount; ++idx)
+	{
+		m_renderFinishedSemaphores[idx].Create(context);
+	}
+}
+
 const dae::Semaphore * dae::SyncManager::GetImageAvailableSemaphore(uint32_t frameIndex) const
 {
 	return &m_imageAvailableSemaphores[frameIndex];

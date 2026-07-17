@@ -16,6 +16,8 @@ namespace dae
 		void Create(const Context& context, uint32_t swapchainImageCount, uint32_t framesInFlight);
 		void Destroy(const Context& context);
 
+		void RecreateRenderFinishedSemaphores(const Context& context, uint32_t swapchainImageCount);
+
 		const Semaphore * GetImageAvailableSemaphore(uint32_t frameIndex) const;
 		const Fence * GetInFlightFence(uint32_t frameIndex) const;
 

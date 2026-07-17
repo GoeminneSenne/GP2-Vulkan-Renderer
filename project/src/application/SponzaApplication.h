@@ -52,7 +52,6 @@ namespace dae
     private:
 
         void HandleResize();
-        void RecreateSwapchain();
         void RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex);
         void UpdateViewProjectionUBO(uint32_t currentImage);
 

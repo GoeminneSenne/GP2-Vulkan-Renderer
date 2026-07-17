@@ -251,7 +251,7 @@ void dae::SponzaApplication::DrawFrame()
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        RecreateSwapchain();
+        HandleResize();
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -302,7 +302,7 @@ void dae::SponzaApplication::DrawFrame()
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_window.wasResized)
     {
         m_window.wasResized = false;
-        RecreateSwapchain();
+        HandleResize();
     }
     else if (result != VK_SUCCESS)
         throw std::runtime_error("failed to present swap chain images!");
@@ -326,55 +326,38 @@ void dae::SponzaApplication::Cleanup()
 
 void dae::SponzaApplication::HandleResize()
 {
-    // Destroy old resources
-    //TODO: destroy swapchain, depthImage
-
-    //Recreate Swapchain
-
-    //Recreate Depth Image
-
-    //Query Swapchain support with new window
-
-    //Recreate swapchain
-
-    //recreate depth image
-
-    //Recreate framebuffers
-
-    //recreate RenderFinishedSemaphores
-
-    //Adjust camere aspect ratios
-}
-
-
-void dae::SponzaApplication::RecreateSwapchain()
-{
     int width = 0, height = 0;
     while (width == 0 || height == 0)
     {
         glfwGetFramebufferSize(m_window.window, &width, &height);
         glfwWaitEvents();
     }
-
     vkDeviceWaitIdle(m_context.logicalDevice.handle);
 
+    // Destroy old resources
     m_resizeDeletionQueue.Flush();
 
+    //Query Swapchain support with new window
     m_context.physicalDevice.swapchainSupport = vkUtils::QuerySwapChainSupport(m_context.instance, m_context.physicalDevice.handle);
 
+    //Recreate swapchain
     m_swapchain.Create(m_window, m_context);
     m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context);});
 
+    //Recreate depth image
     DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
     m_resizeDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context);});
 
+    //Recreate framebuffers
     SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
 
+    //Recreate RenderFinishedSemaphores
+    m_syncManager.RecreateRenderFinishedSemaphores(m_context, m_swapchain.images.size());
+
+    //Adjust camere aspect ratios
     m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
-
-
-    //Todo add RenderFinishedSemaphores reconstruction in SyncManager
 }
+
 
 void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex)
 {
