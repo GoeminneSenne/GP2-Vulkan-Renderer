@@ -59,7 +59,6 @@ void dae::InstanceBuilder::Build(Instance& instance)
 
 	//DEBUG MESSENGER
 	/////////////////////
-	///TODO: seperate private function?
 	if (!useValidation) return;
 
 	LoadInstanceDebugFunctions(instance.handle, instance.debugTable);
@@ -186,6 +185,5 @@ void dae::InstanceBuilder::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessenge
 	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
 		| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = DebugCallback;
-	createInfo.pUserData = nullptr; //Optional
 }
 

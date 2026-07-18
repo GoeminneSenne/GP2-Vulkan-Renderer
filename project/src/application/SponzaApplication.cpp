@@ -410,11 +410,9 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
 void dae::SponzaApplication::UpdateViewProjectionUBO(uint32_t currentImage)
 {
     ViewProjectionUBO ubo{
-        m_camera.CalculateViewMatrix(),
+        m_camera.viewMatrix,
         m_camera.projectionMatrix
 	};
 
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-     
-	
 }
