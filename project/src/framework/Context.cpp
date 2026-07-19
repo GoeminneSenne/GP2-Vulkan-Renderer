@@ -56,6 +56,7 @@ void dae::ContextFactory::Create(const Window* pWindow, Context& context)
 	//Physical Device
 	PhysicalDeviceSelector physicalDeviceSelector = {};
 	physicalDeviceSelector
+		.SetRequestedFeatures(features)
 		.AddDeviceExtensions(m_config.deviceExtensions)
 		.PickPhysicalDevice(context.instance, context.physicalDevice);
 

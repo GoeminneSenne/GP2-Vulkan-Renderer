@@ -6,6 +6,12 @@
 #include "Instance.h"
 #include "Utils.h"
 
+dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::SetRequestedFeatures(const DeviceFeatures& features)
+{
+	requestedFeatures = features;
+	return *this;
+}
+
 dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtension(const char* extensionName)
 {
 	deviceExtensions.push_back(extensionName);
@@ -34,6 +40,7 @@ void dae::PhysicalDeviceSelector::PickPhysicalDevice(const Instance& instance, P
 	{
 		if (IsDeviceSuitable(instance, device))
 		{
+
 			physicalDevice.handle = device;
 			physicalDevice.queueFamilyIndices = vkUtils::FindQueueFamilies(instance, device);
 			physicalDevice.swapchainSupport = vkUtils::QuerySwapChainSupport(instance, device);
@@ -60,10 +67,33 @@ bool dae::PhysicalDeviceSelector::IsDeviceSuitable(const Instance& instance, VkP
 		swapChainAdequate = !swapchainSupport.formats.empty() && !swapchainSupport.presentModes.empty();
 	}
 
-	VkPhysicalDeviceFeatures supportedFeatures;
-	vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+	//Initialize all features structs to be filled in
+	VkPhysicalDeviceVulkan13Features availableFeatures13{};
+	availableFeatures13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	VkPhysicalDeviceVulkan12Features availableFeatures12{};
+	availableFeatures12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	availableFeatures12.pNext = &availableFeatures13;
+	VkPhysicalDeviceVulkan11Features availableFeatures11{};
+	availableFeatures11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+	availableFeatures11.pNext = &availableFeatures12;
+	VkPhysicalDeviceFeatures2 availableFeatures{};
+	availableFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	availableFeatures.pNext = &availableFeatures11;
 
-	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+	vkGetPhysicalDeviceFeatures2(device, &availableFeatures);
+	
+	//Check if all required features are available
+	bool featuresAvailable = true;
+	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceFeatures>(
+		availableFeatures.features, requestedFeatures.features2.features);
+	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan11Features>(
+		availableFeatures11, requestedFeatures.features11);
+	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan12Features>(
+		availableFeatures12, requestedFeatures.features12);
+	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan13Features>(
+		availableFeatures13, requestedFeatures.features13);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate && featuresAvailable;
 }
 
 bool dae::PhysicalDeviceSelector::CheckDeviceExtensionsSupport(VkPhysicalDevice device) const
