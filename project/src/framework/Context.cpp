@@ -34,10 +34,9 @@ void dae::ContextFactory::Create(const Window* pWindow, Context& context)
 	InstanceBuilder instanceBuilder = {};
 	instanceBuilder
 		.SetApplicationName("Hello Triangle")
-		.SetApiVersion(VK_MAKE_VERSION(1, 0, 0))
+		.SetApiVersion(VK_API_VERSION_1_3)
 		.SetEngineName("No Engine")
 		.SetEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-		.SetApiVersion(VK_API_VERSION_1_0)
 		.UseValidation(m_config.enableValidation)
 		.AddValidationLayers(m_config.validationLayers)
 		.Build(context.instance);

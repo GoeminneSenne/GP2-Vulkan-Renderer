@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <stdexcept>
 #include <filesystem>
 
@@ -121,43 +122,13 @@ namespace dae
 				1, &barrier);
 		}
 
-		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image, 
-			VkPipelineStageFlags sourceStage, VkPipelineStageFlags destinationStage,
-			VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, 
-			VkImageLayout oldLayout, VkImageLayout newLayout)
-		{
-			VkImageMemoryBarrier barrier{};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.oldLayout = oldLayout;
-			barrier.newLayout = newLayout;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = image.image;
-			barrier.subresourceRange.aspectMask = image.aspectMask;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = image.mipLevels;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
-			barrier.srcAccessMask = srcAccessMask;
-			barrier.dstAccessMask = dstAccessMask;
-
-			vkCmdPipelineBarrier(
-				commandBuffer.handle,
-				sourceStage, destinationStage,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-
-			image.layout = newLayout;
-		}
-
-		inline void TransitionImageLayout2(const CommandBuffer& commandBuffer, Image& image,
+		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image,
 			VkPipelineStageFlags2 sourceStage, VkPipelineStageFlags2 destinationStage,
 			VkAccessFlags2 srcAccessMask, VkAccessFlags2 dstAccessMask,
 			VkImageLayout oldLayout, VkImageLayout newLayout)
 		{
+			image.layout = newLayout;
+
 			VkImageMemoryBarrier2 barrier2{};
 			barrier2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 			barrier2.srcStageMask = sourceStage;
@@ -181,8 +152,6 @@ namespace dae
 			dependencyInfo.pImageMemoryBarriers = &barrier2;
 
 			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
-
-			image.layout = newLayout;
 		}
 
 		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
@@ -216,8 +185,8 @@ namespace dae
 
 			CommandBuffer commandBuffer = context.commandPool.BeginSingleTimeCommand();
 			TransitionImageLayout(commandBuffer, image,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_ACCESS_NONE, VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+				VK_ACCESS_2_NONE, VK_ACCESS_2_TRANSFER_WRITE_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
