@@ -42,7 +42,7 @@ namespace dae
 		void Initialize(float _fovAngle = 90.f, const glm::vec3& _origin = { 0.f, 0.f, 0.f }, float _nearPlane = 1.f, float _farPlane = 1000.f);
 		glm::mat4 CalculateViewMatrix();
 		glm::mat4 CalculateRotationMatrix() const;
-		//Should be called everytime fov / aspectRation changes
+		//Should be called everytime fov / aspectRatio changes
 		glm::mat4 CalculateProjectionMatrix(uint32_t width, uint32_t height);
 
 		void Update(const Timer& timer, const Window& window);

@@ -24,7 +24,6 @@ namespace dae
 
 		void Build(const PhysicalDevice& physicalDevice, LogicalDevice& logicalDevice);
 
-		LogicalDeviceBuilder& EnablebleAnisotropy(bool enable);
 		LogicalDeviceBuilder& AddDeviceExtension(const char* extensionName);
 		LogicalDeviceBuilder& AddDeviceExtensions(const std::vector<const char*>& extensionNames);
 		LogicalDeviceBuilder& AddValidationLayer(const char* layerName);
@@ -34,7 +33,6 @@ namespace dae
 	private:
 		Queue InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const;
 
-		VkPhysicalDeviceFeatures features10{};
 		std::vector<const char*> deviceExtensions{};
 		std::vector<const char*> validationLayers{};
 		bool useValidation{ false };

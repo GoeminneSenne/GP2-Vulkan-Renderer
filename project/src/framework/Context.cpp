@@ -3,6 +3,7 @@
 #include "Common.h"
 #include "LogicalDevice.h"
 #include "Window.h"
+#include "DeviceFeatures.h"
 #include "GLFW/glfw3.h"
 
 //VMA includes
@@ -29,16 +30,7 @@ dae::ContextFactory::ContextFactory(ContextConfig config)
 
 void dae::ContextFactory::Create(const Window* pWindow, Context& context)
 {
-	CreateInstance(context);
-	CreateSurface(context, pWindow);
-	PickPhysicalDevice(context);
-	CreateLogicalDevice(context);
-	CreateCommandPool(context);
-	CreateAllocator(context);
-}
-
-void dae::ContextFactory::CreateInstance(Context& context)
-{
+	//Instance
 	InstanceBuilder instanceBuilder = {};
 	instanceBuilder
 		.SetApplicationName("Hello Triangle")
@@ -49,42 +41,36 @@ void dae::ContextFactory::CreateInstance(Context& context)
 		.UseValidation(m_config.enableValidation)
 		.AddValidationLayers(m_config.validationLayers)
 		.Build(context.instance);
-}
 
-void dae::ContextFactory::CreateSurface(Context& context, const Window* pWindow)
-{
+	//Surface
 	LOG_VULKAN_ERROR(
 		glfwCreateWindowSurface(context.instance.handle, pWindow->window, nullptr, &context.instance.surface),
 		"failed to create window surface!"
 	);
-}
 
-void dae::ContextFactory::PickPhysicalDevice(Context& context)
-{
+	//Required Device Features
+	DeviceFeatures features{};
+	features.features13.synchronization2 = VK_TRUE;
+	features.features2.features.samplerAnisotropy = VK_TRUE;
+
+	//Physical Device
 	PhysicalDeviceSelector physicalDeviceSelector = {};
 	physicalDeviceSelector
 		.AddDeviceExtensions(m_config.deviceExtensions)
 		.PickPhysicalDevice(context.instance, context.physicalDevice);
-}
 
-void dae::ContextFactory::CreateLogicalDevice(Context& context)
-{
+	//Logical Device
 	LogicalDeviceBuilder logicalDeviceBuilder = {};
 	logicalDeviceBuilder
-		.EnablebleAnisotropy(true)
 		.AddDeviceExtensions(m_config.deviceExtensions)
 		.UseValidation(m_config.enableValidation)
 		.AddValidationLayers(m_config.validationLayers)
-		.Build(context.physicalDevice,context.logicalDevice);
-}
+		.Build(context.physicalDevice, context.logicalDevice);
 
-void dae::ContextFactory::CreateCommandPool(Context& context)
-{
+	//Command Pool
 	context.commandPool.CreateCommandPool(&context.logicalDevice);
-}
 
-void dae::ContextFactory::CreateAllocator(Context& context)
-{
+	//VMA Allocator
 	VmaAllocatorCreateInfo createInfo{};
 	createInfo.physicalDevice = context.physicalDevice.handle;
 	createInfo.device = context.logicalDevice.handle;

@@ -38,13 +38,6 @@ namespace dae
 		void Create(const Window* pWindow, Context& context);
 
 	private:
-		void CreateInstance(Context& context);
-		void CreateSurface(Context& context, const Window* pWindow);
-		void PickPhysicalDevice(Context& context);
-		void CreateLogicalDevice(Context& context);
-		void CreateCommandPool(Context& context);
-		void CreateAllocator(Context& context);
-
 		ContextConfig m_config{};
 	};
 }

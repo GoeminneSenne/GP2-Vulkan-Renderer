@@ -3,6 +3,7 @@
 #include <set>
 
 #include "Common.h"
+#include "DeviceFeatures.h"
 #include "PhysicalDevice.h"
 
 void dae::LogicalDevice::Destroy()
@@ -46,6 +47,8 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 	features11.pNext = &features12;
 	
+	VkPhysicalDeviceFeatures features10{};
+	features10.samplerAnisotropy = VK_TRUE;
 
 	VkPhysicalDeviceFeatures2 features2{};
 	features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -78,12 +81,6 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 
 	logicalDevice.graphicsQueue = InitQueue(logicalDevice, familyIndices.graphicsFamily.value());
 	logicalDevice.presentQueue = InitQueue(logicalDevice, familyIndices.presentFamily.value());
-}
-
-dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::EnablebleAnisotropy(bool enable)
-{
-	features10.samplerAnisotropy = enable ? VK_TRUE : VK_FALSE;
-	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddDeviceExtension(const char* extensionName)
