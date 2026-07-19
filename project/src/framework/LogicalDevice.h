@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "DeviceFeatures.h"
 #include "Queue.h"
 
 namespace dae
@@ -24,6 +26,7 @@ namespace dae
 
 		void Build(const PhysicalDevice& physicalDevice, LogicalDevice& logicalDevice);
 
+		LogicalDeviceBuilder& SetDeviceFeatures(const DeviceFeatures& deviceFeatures);
 		LogicalDeviceBuilder& AddDeviceExtension(const char* extensionName);
 		LogicalDeviceBuilder& AddDeviceExtensions(const std::vector<const char*>& extensionNames);
 		LogicalDeviceBuilder& AddValidationLayer(const char* layerName);
@@ -33,9 +36,9 @@ namespace dae
 	private:
 		Queue InitQueue(const LogicalDevice& logicalDevice, uint32_t queueFamily) const;
 
+		DeviceFeatures features{};
 		std::vector<const char*> deviceExtensions{};
 		std::vector<const char*> validationLayers{};
 		bool useValidation{ false };
-
 	};
 }

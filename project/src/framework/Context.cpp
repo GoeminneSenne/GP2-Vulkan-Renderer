@@ -62,6 +62,7 @@ void dae::ContextFactory::Create(const Window* pWindow, Context& context)
 	//Logical Device
 	LogicalDeviceBuilder logicalDeviceBuilder = {};
 	logicalDeviceBuilder
+		.SetDeviceFeatures(features)
 		.AddDeviceExtensions(m_config.deviceExtensions)
 		.UseValidation(m_config.enableValidation)
 		.AddValidationLayers(m_config.validationLayers)

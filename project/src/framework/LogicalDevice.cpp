@@ -33,34 +33,11 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
-	//Device Features
-	VkPhysicalDeviceVulkan13Features features13{};
-	features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-	features13.pNext = nullptr;
-	features13.synchronization2 = VK_TRUE;
-
-	VkPhysicalDeviceVulkan12Features features12{};
-	features12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-	features12.pNext = &features13;
-
-	VkPhysicalDeviceVulkan11Features features11{};
-	features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-	features11.pNext = &features12;
-	
-	VkPhysicalDeviceFeatures features10{};
-	features10.samplerAnisotropy = VK_TRUE;
-
-	VkPhysicalDeviceFeatures2 features2{};
-	features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	features2.features = features10;
-	features2.pNext = &features11;
-
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &features2;
+	createInfo.pNext = &features.features2;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	//createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
@@ -81,6 +58,12 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 
 	logicalDevice.graphicsQueue = InitQueue(logicalDevice, familyIndices.graphicsFamily.value());
 	logicalDevice.presentQueue = InitQueue(logicalDevice, familyIndices.presentFamily.value());
+}
+
+dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::SetDeviceFeatures(const DeviceFeatures& deviceFeatures)
+{
+	features = deviceFeatures;
+	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddDeviceExtension(const char* extensionName)
