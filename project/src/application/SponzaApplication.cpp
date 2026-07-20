@@ -264,31 +264,42 @@ void dae::SponzaApplication::DrawFrame()
     RecordRenderCommandBuffer(m_renderCommandBuffers[currentFrame], imageIndex);
 
     // --- Submit --------------------------
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkSemaphoreSubmitInfo waitSemaphoreInfo{};
+    waitSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    waitSemaphoreInfo.semaphore = imageAvailableSemaphore->GetHandle();
+    waitSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    VkSemaphore waitSemaphores[] = { imageAvailableSemaphore->GetHandle() };
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_renderCommandBuffers[currentFrame].handle;
+    VkCommandBufferSubmitInfo commandInfo{};
+    commandInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    commandInfo.commandBuffer = m_renderCommandBuffers[currentFrame].handle;
 
     //Get semaphore using imageIndex instead of currentFrame!
     const Semaphore* renderFinishedSemaphore = m_syncManager.GetRenderFinishedSemaphore(imageIndex);
 
-    VkSemaphore signalSemaphores[] = { renderFinishedSemaphore->GetHandle() };
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    VkSemaphoreSubmitInfo signalSemaphoreInfo{};
+    signalSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signalSemaphoreInfo.semaphore = renderFinishedSemaphore->GetHandle();
+    signalSemaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    m_context.logicalDevice.graphicsQueue.Submit(submitInfo, *inFlightFence);
+    VkSubmitInfo2 submitInfo2{};
+    submitInfo2.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo2.waitSemaphoreInfoCount = 1;
+    submitInfo2.pWaitSemaphoreInfos = &waitSemaphoreInfo;
+    submitInfo2.commandBufferInfoCount = 1;
+    submitInfo2.pCommandBufferInfos = &commandInfo;
+    submitInfo2.signalSemaphoreInfoCount = 1;
+    submitInfo2.pSignalSemaphoreInfos = &signalSemaphoreInfo;
+
+    LOG_VULKAN_ERROR(
+        vkQueueSubmit2(m_context.logicalDevice.graphicsQueue.GetHandle(), 1, &submitInfo2, inFlightFence->GetHandle()),
+        "failed to submit draw command buffer"
+    );
 
     // --- Present --------------------------
+    VkSemaphore signalSemaphores[] = { renderFinishedSemaphore->GetHandle() };
+
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
 
