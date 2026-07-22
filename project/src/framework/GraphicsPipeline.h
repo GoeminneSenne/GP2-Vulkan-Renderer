@@ -34,6 +34,11 @@ namespace dae
 		GraphicsPipelineBuilder& AddVertexInputBindingDescription(VkVertexInputBindingDescription bindingDescription);
 		GraphicsPipelineBuilder& AddVertexInputAttributeDescriptions(const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
+		//Dynamic Rendering
+		GraphicsPipelineBuilder& UseDynamicRendering(bool enableDynamic);
+		GraphicsPipelineBuilder& AddColorAttachment(VkFormat format);
+		GraphicsPipelineBuilder& SetDepthAttachment(VkFormat format);
+
 	private:
 		const PipelineLayout* m_layout = nullptr;
 		const RenderPass* m_renderPass = nullptr;
@@ -46,8 +51,12 @@ namespace dae
 		bool m_depthTestEnable{ false };
 		bool m_depthWriteEnable{ false };
 		VkCompareOp m_depthCompareOp{};
-		//Multisampling?
 		std::vector<VkVertexInputBindingDescription> m_bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> m_attributeDescriptions;
+
+		//Dynamic Rendering
+		bool m_useDynamicRendering{ false };
+		std::vector<VkFormat> m_colorAttachments{};
+		VkFormat m_depthFormat{};
 	};
 }

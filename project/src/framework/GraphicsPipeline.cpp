@@ -173,3 +173,21 @@ dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::AddVertexInputAttrib
 	m_attributeDescriptions.insert(m_attributeDescriptions.end(), attributeDescriptions.begin(), attributeDescriptions.end());
 	return *this;
 }
+
+dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::UseDynamicRendering(bool enableDynamic)
+{
+	m_useDynamicRendering = enableDynamic;
+	return *this;
+}
+
+dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::AddColorAttachment(VkFormat format)
+{
+	m_colorAttachments.push_back(format);
+	return *this;
+}
+
+dae::GraphicsPipelineBuilder& dae::GraphicsPipelineBuilder::SetDepthAttachment(VkFormat format)
+{
+	m_depthFormat = format;
+	return *this;
+}
