@@ -3,6 +3,7 @@
 
 //#define VULKAN_DEMO_APP
 #define SPONZA_APP
+//#define RENDERPASS_EXAMPLE_APP
 
 #ifdef VULKAN_DEMO_APP
 #include "VulkanDemoApplication.h"
@@ -12,6 +13,11 @@ typedef dae::VulkanDemoApplication application;
 #ifdef SPONZA_APP
 #include "SponzaApplication.h"
 typedef dae::SponzaApplication application;
+#endif
+
+#ifdef RENDERPASS_EXAMPLE_APP
+#include "RenderPassExample.h"
+typedef dae::RenderPassExampleApplication application;
 #endif
 
 int main() {

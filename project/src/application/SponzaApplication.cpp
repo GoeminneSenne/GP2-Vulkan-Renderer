@@ -50,16 +50,7 @@ void dae::SponzaApplication::Init()
         m_swapchain.Create(m_window, m_context);
         m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context); });
     }
-    // --- RenderPass -------------------------------
-    {
-        RenderPassBuilder renderPassBuilder = {};
-        renderPassBuilder
-            .AddColorAttachment(m_swapchain.imageFormat)
-            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-            .Build(m_context, m_renderPass);
 
-        m_applicationDeletionQueue.PushDeletor([&]() {m_renderPass.Destroy(m_context); });
-    }
     // --- DescriptorSetLayouts ----------------------
     
     DescriptorSetLayoutBuilder layoutBuilder{};
@@ -87,7 +78,6 @@ void dae::SponzaApplication::Init()
 
         shaderLoader
             .SetFilename("resources/shaders/sponza.frag.spv")
-            //.SetFilename("resources/shaders/base_shader.frag.spv")
             .Load(m_context, fragmentShader);
     }
     
@@ -102,18 +92,9 @@ void dae::SponzaApplication::Init()
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
 
-        /*
-        RenderPassBuilder renderPassBuilder = {};
-        renderPassBuilder
-            .AddColorAttachment(m_swapchain.imageFormat)
-            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-            .Build(m_context, m_renderPass);
-        */
-
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
             .SetPipelineLayout(m_graphicsPipelineLayout)
-            //.SetRenderPass(m_renderPass)
             .UseDynamicRendering(true)
             .AddColorAttachment(m_swapchain.imageFormat)
             .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
@@ -139,10 +120,7 @@ void dae::SponzaApplication::Init()
 	    DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
         m_resizeDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context);});
     }
-    // --- Framebuffers ------------------------------
-    {
-        SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
-    }
+
     // --- Texture Sampler --------------------------
     {
         SamplerBuilder samplerBuilder = {};
@@ -367,11 +345,8 @@ void dae::SponzaApplication::HandleResize()
     DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
     m_resizeDeletionQueue.PushDeletor([&]() {m_depthImage.Destroy(m_context);});
 
-    //Recreate framebuffers
-    SwapchainHelpers::CreateFramebuffers(m_context, m_renderPass, m_depthImage, m_swapchain);
-
     //Recreate RenderFinishedSemaphores
-    m_syncManager.RecreateRenderFinishedSemaphores(m_context, m_swapchain.images.size());
+    m_syncManager.RecreateRenderFinishedSemaphores(m_context, static_cast<uint32_t>(m_swapchain.images.size()));
 
     //Adjust camere aspect ratios
     m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
@@ -423,6 +398,7 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
 
     vkCmdBeginRendering(commandBuffer.handle, &renderInfo);
 
+    //Bind data
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
 
     VkViewport viewport{};
@@ -444,57 +420,16 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
+    //Render scene
     m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
 
     vkCmdEndRendering(commandBuffer.handle);
 
+    //Present image memory barrier
     ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
         VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_NONE);
 
-    /*
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = m_renderPass.handle;
-    renderPassInfo.framebuffer = m_swapchain.framebuffers[imageIndex].handle;
-    renderPassInfo.renderArea.offset = { 0,0 };
-    renderPassInfo.renderArea.extent = m_swapchain.extent;
-
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-    clearValues[1].depthStencil = { 1.f, 0 };
-
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
-
-    vkCmdBeginRenderPass(commandBuffer.handle, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
-
-    VkViewport viewport{};
-    viewport.x = 0.f;
-    viewport.y = 0.f;
-    viewport.width = static_cast<float>(m_swapchain.extent.width);
-    viewport.height = static_cast<float>(m_swapchain.extent.height);
-    viewport.minDepth = 0.f;
-    viewport.maxDepth = 1.f;
-    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = { 0,0 };
-    scissor.extent = m_swapchain.extent;
-    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-
-    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
-
-    m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
-
-    vkCmdEndRenderPass(commandBuffer.handle);
-
-    */
     commandBuffer.End();
 }
 
