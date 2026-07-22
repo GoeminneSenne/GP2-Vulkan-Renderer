@@ -93,11 +93,26 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 	pipelineInfo.pColorBlendState = &colorBlending;
 	pipelineInfo.pDynamicState = &dynamicState;
 	pipelineInfo.layout = m_layout->handle;
-	pipelineInfo.renderPass = m_renderPass->handle;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 	pipelineInfo.pDepthStencilState = &depthStencil;
+
+	if (m_useDynamicRendering)
+	{
+		VkPipelineRenderingCreateInfo renderingInfo{};
+		renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		renderingInfo.colorAttachmentCount = static_cast<uint32_t>(m_colorAttachments.size());
+		renderingInfo.pColorAttachmentFormats = m_colorAttachments.data();
+		renderingInfo.depthAttachmentFormat = m_depthFormat;
+
+		pipelineInfo.renderPass = VK_NULL_HANDLE;
+		pipelineInfo.pNext = &renderingInfo;
+	}
+	else
+	{
+		pipelineInfo.renderPass = m_renderPass->handle;
+	}
 
 	LOG_VULKAN_ERROR(
 		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
