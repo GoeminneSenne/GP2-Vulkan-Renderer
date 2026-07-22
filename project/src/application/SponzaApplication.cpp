@@ -93,8 +93,6 @@ void dae::SponzaApplication::Init()
     
     // --- Graphics Pipeline ------------------------
     {
-
-
         PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
 			.AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)

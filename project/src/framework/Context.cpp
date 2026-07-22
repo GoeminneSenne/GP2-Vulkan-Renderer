@@ -49,8 +49,9 @@ void dae::ContextFactory::Create(const Window* pWindow, Context& context)
 
 	//Required Device Features
 	DeviceFeatures features{};
-	features.features13.synchronization2 = VK_TRUE;
 	features.features2.features.samplerAnisotropy = VK_TRUE;
+	features.features13.synchronization2 = VK_TRUE;
+	features.features13.dynamicRendering = VK_TRUE;
 
 	//Physical Device
 	PhysicalDeviceSelector physicalDeviceSelector = {};

@@ -135,20 +135,17 @@ namespace dae
 			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
 		}
 
-		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image,
+		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image, VkImageLayout newLayout,
 			VkPipelineStageFlags2 sourceStage, VkPipelineStageFlags2 destinationStage,
-			VkAccessFlags2 srcAccessMask, VkAccessFlags2 dstAccessMask,
-			VkImageLayout oldLayout, VkImageLayout newLayout)
+			VkAccessFlags2 srcAccessMask, VkAccessFlags2 dstAccessMask)
 		{
-			image.layout = newLayout;
-
 			VkImageMemoryBarrier2 barrier2{};
 			barrier2.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 			barrier2.srcStageMask = sourceStage;
 			barrier2.srcAccessMask = srcAccessMask;
 			barrier2.dstStageMask = destinationStage;
 			barrier2.dstAccessMask = dstAccessMask;
-			barrier2.oldLayout = oldLayout;
+			barrier2.oldLayout = image.layout;
 			barrier2.newLayout = newLayout;
 			barrier2.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier2.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -165,6 +162,8 @@ namespace dae
 			dependencyInfo.pImageMemoryBarriers = &barrier2;
 
 			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
+
+			image.layout = newLayout;
 		}
 
 		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
@@ -197,10 +196,9 @@ namespace dae
 				.Build(context, image);
 
 			CommandBuffer commandBuffer = context.commandPool.BeginSingleTimeCommand();
-			TransitionImageLayout(commandBuffer, image,
+			TransitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-				VK_ACCESS_2_NONE, VK_ACCESS_2_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				VK_ACCESS_2_NONE, VK_ACCESS_2_TRANSFER_WRITE_BIT);
 			context.commandPool.EndSingleTimeCommand(commandBuffer);
 
 			commandBuffer = context.commandPool.BeginSingleTimeCommand();
