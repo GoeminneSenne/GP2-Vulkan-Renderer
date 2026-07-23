@@ -26,6 +26,7 @@ void dae::ImageBuilder::Build(const Context& context, Image& image) const
 {
 
 	//Set extra info from Image struct
+	image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	image.format = m_format;
 	image.extent.width = m_width;
 	image.extent.height = m_height;
