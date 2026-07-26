@@ -145,7 +145,6 @@ void dae::SponzaApplication::Init()
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
             VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
             BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize),
 
@@ -182,7 +181,6 @@ void dae::SponzaApplication::Init()
             writer
                 .SetTarget(&m_frameDescriptorSets[i])
                 .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
-                //.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_textureImage, m_sampler)
                 .UpdateTarget(m_context);
         }
     }

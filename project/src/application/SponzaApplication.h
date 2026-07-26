@@ -63,7 +63,6 @@ namespace dae
 
         Swapchain m_swapchain{};
 
-        RenderPass m_renderPass{};
         DescriptorSetLayout m_frameDataSetLayout{};
         DescriptorSetLayout m_globalDataSetLayout{};
         DescriptorPool m_descriptorPool;
