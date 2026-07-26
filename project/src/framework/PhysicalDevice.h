@@ -33,8 +33,8 @@ namespace dae
 		template <typename T>
 		static bool AreRequiredFeaturesAvailable(const T& available, const T& requested);
 
-		DeviceFeatures requestedFeatures{};
-		std::vector<const char*> deviceExtensions;
+		DeviceFeatures m_requestedFeatures{};
+		std::vector<const char*> m_deviceExtensions;
 	};
 
 	template <typename T>

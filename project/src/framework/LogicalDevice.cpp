@@ -35,16 +35,16 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &features.features2;
+	createInfo.pNext = &m_features.features2;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(m_deviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = m_deviceExtensions.data();
 
-	if (useValidation)
+	if (m_useValidation)
 	{
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
+		createInfo.ppEnabledLayerNames = m_validationLayers.data();
 	}
 	else
 	{
@@ -62,37 +62,37 @@ void dae::LogicalDeviceBuilder::Build(const PhysicalDevice& physicalDevice, Logi
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::SetDeviceFeatures(const DeviceFeatures& deviceFeatures)
 {
-	features = deviceFeatures;
+	m_features = deviceFeatures;
 	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddDeviceExtension(const char* extensionName)
 {
-	deviceExtensions.push_back(extensionName);
+	m_deviceExtensions.push_back(extensionName);
 	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddDeviceExtensions(const std::vector<const char*>& extensionNames)
 {
-	deviceExtensions.insert(deviceExtensions.end(), extensionNames.begin(), extensionNames.end());
+	m_deviceExtensions.insert(m_deviceExtensions.end(), extensionNames.begin(), extensionNames.end());
 	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddValidationLayer(const char* layerName)
 {
-	validationLayers.push_back(layerName);
+	m_validationLayers.push_back(layerName);
 	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::AddValidationLayers(const std::vector<const char*>& layerNames)
 {
-	validationLayers.insert(validationLayers.end(), layerNames.begin(), layerNames.end());
+	m_validationLayers.insert(m_validationLayers.end(), layerNames.begin(), layerNames.end());
 	return *this;
 }
 
 dae::LogicalDeviceBuilder& dae::LogicalDeviceBuilder::UseValidation(bool use)
 {
-	useValidation = true;
+	m_useValidation = true;
 	return *this;
 }
 

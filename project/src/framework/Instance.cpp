@@ -16,34 +16,34 @@ void dae::Instance::Destroy()
 
 void dae::InstanceBuilder::Build(Instance& instance)
 {
-	if (useValidation && !CheckValidationLayerSupport())
+	if (m_useValidation && !CheckValidationLayerSupport())
 		throw std::runtime_error("Validation layers requested, but not available");
 
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = applicationName.c_str();
-	appInfo.applicationVersion = applicationVersion;
-	appInfo.pEngineName = engineName.c_str();
-	appInfo.engineVersion = engineVersion;
-	appInfo.apiVersion = apiVersion;
+	appInfo.pApplicationName = m_applicationName.c_str();
+	appInfo.applicationVersion = m_applicationVersion;
+	appInfo.pEngineName = m_engineName.c_str();
+	appInfo.engineVersion = m_engineVersion;
+	appInfo.apiVersion = m_apiVersion;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
 	auto reqExtensions = GetRequiredExtensions();
-	extensions.insert(extensions.end(), reqExtensions.begin(), reqExtensions.end());
+	m_extensions.insert(m_extensions.end(), reqExtensions.begin(), reqExtensions.end());
 
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-	createInfo.ppEnabledExtensionNames = extensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(m_extensions.size());
+	createInfo.ppEnabledExtensionNames = m_extensions.data();
 
-	if (useValidation)
+	if (m_useValidation)
 	{
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 		PopulateDebugMessengerCreateInfo(debugCreateInfo);
 
-		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-		createInfo.ppEnabledLayerNames = validationLayers.data();
+		createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
+		createInfo.ppEnabledLayerNames = m_validationLayers.data();
 		createInfo.pNext = &debugCreateInfo;
 	}
 	else
@@ -59,7 +59,7 @@ void dae::InstanceBuilder::Build(Instance& instance)
 
 	//DEBUG MESSENGER
 	/////////////////////
-	if (!useValidation) return;
+	if (!m_useValidation) return;
 
 	LoadInstanceDebugFunctions(instance.handle, instance.debugTable);
 
@@ -74,61 +74,61 @@ void dae::InstanceBuilder::Build(Instance& instance)
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetApplicationName(std::string name)
 {
-	applicationName = std::move(name);
+	m_applicationName = std::move(name);
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetApplicationVersion(uint32_t version)
 {
-	applicationVersion = version;
+	m_applicationVersion = version;
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetEngineName(std::string name)
 {
-	engineName = std::move(name);
+	m_engineName = std::move(name);
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetEngineVersion(uint32_t version)
 {
-	engineVersion = version;
+	m_engineVersion = version;
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::SetApiVersion(uint32_t version)
 {
-	apiVersion = version;
+	m_apiVersion = version;
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::AddExtension(const char* extensionName)
 {
-	extensions.push_back(extensionName);
+	m_extensions.push_back(extensionName);
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::AddExtensions(const std::vector<const char*>& extensionNames)
 {
-	extensions.insert(extensions.end(), extensionNames.begin(), extensionNames.end());
+	m_extensions.insert(m_extensions.end(), extensionNames.begin(), extensionNames.end());
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::AddValidationLayer(const char* layerName)
 {
-	validationLayers.push_back(layerName);
+	m_validationLayers.push_back(layerName);
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::AddValidationLayers(const std::vector<const char*>& layerNames)
 {
-	validationLayers.insert(validationLayers.end(), layerNames.begin(), layerNames.end());
+	m_validationLayers.insert(m_validationLayers.end(), layerNames.begin(), layerNames.end());
 	return *this;
 }
 
 dae::InstanceBuilder& dae::InstanceBuilder::UseValidation(bool use)
 {
-	useValidation = use;
+	m_useValidation = use;
 	return *this;
 }
 
@@ -139,7 +139,7 @@ std::vector<const char*> dae::InstanceBuilder::GetRequiredExtensions() const
 
 	std::vector<const char*> reqExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-	if (useValidation)
+	if (m_useValidation)
 	{
 		reqExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
@@ -155,7 +155,7 @@ bool dae::InstanceBuilder::CheckValidationLayerSupport() const
 	std::vector<VkLayerProperties> availableLayers(layerCount);
 	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (const char* layerName : validationLayers)
+	for (const char* layerName : m_validationLayers)
 	{
 		bool layerFound = false;
 

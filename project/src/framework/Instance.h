@@ -43,13 +43,13 @@ namespace dae
 		bool CheckValidationLayerSupport() const;
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) const;
 
-		std::string applicationName{};
-		uint32_t applicationVersion{};
-		std::string engineName{};
-		uint32_t engineVersion{};
-		uint32_t apiVersion{};
-		std::vector<const char*> extensions{};
-		std::vector<const char*> validationLayers{};
-		bool useValidation{ false };
+		std::string m_applicationName{};
+		uint32_t m_applicationVersion{};
+		std::string m_engineName{};
+		uint32_t m_engineVersion{};
+		uint32_t m_apiVersion{};
+		std::vector<const char*> m_extensions{};
+		std::vector<const char*> m_validationLayers{};
+		bool m_useValidation{ false };
 	};
 }

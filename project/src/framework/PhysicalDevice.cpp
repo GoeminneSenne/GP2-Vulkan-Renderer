@@ -8,20 +8,20 @@
 
 dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::SetRequestedFeatures(const DeviceFeatures& features)
 {
-	requestedFeatures = features;
+	m_requestedFeatures = features;
 	return *this;
 }
 
 dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtension(const char* extensionName)
 {
-	deviceExtensions.push_back(extensionName);
+	m_deviceExtensions.push_back(extensionName);
 	return *this;
 }
 
 dae::PhysicalDeviceSelector& dae::PhysicalDeviceSelector::AddDeviceExtensions(
 	const std::vector<const char*>& extensionNames)
 {
-	deviceExtensions.insert(deviceExtensions.end(), extensionNames.begin(), extensionNames.end());
+	m_deviceExtensions.insert(m_deviceExtensions.end(), extensionNames.begin(), extensionNames.end());
 	return *this;
 }
 
@@ -85,13 +85,13 @@ bool dae::PhysicalDeviceSelector::IsDeviceSuitable(const Instance& instance, VkP
 	//Check if all required features are available
 	bool featuresAvailable = true;
 	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceFeatures>(
-		availableFeatures.features, requestedFeatures.features2.features);
+		availableFeatures.features, m_requestedFeatures.features2.features);
 	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan11Features>(
-		availableFeatures11, requestedFeatures.features11);
+		availableFeatures11, m_requestedFeatures.features11);
 	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan12Features>(
-		availableFeatures12, requestedFeatures.features12);
+		availableFeatures12, m_requestedFeatures.features12);
 	featuresAvailable &= AreRequiredFeaturesAvailable<VkPhysicalDeviceVulkan13Features>(
-		availableFeatures13, requestedFeatures.features13);
+		availableFeatures13, m_requestedFeatures.features13);
 
 	return indices.isComplete() && extensionsSupported && swapChainAdequate && featuresAvailable;
 }
@@ -104,7 +104,7 @@ bool dae::PhysicalDeviceSelector::CheckDeviceExtensionsSupport(VkPhysicalDevice 
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+	std::set<std::string> requiredExtensions(m_deviceExtensions.begin(), m_deviceExtensions.end());
 
 	for (const auto& extension : availableExtensions)
 	{
