@@ -1,7 +1,6 @@
 #include "Queue.h"
 
 #include "Common.h"
-#include "Fence.h"
 
 dae::Queue::Queue(VkQueue queue, uint32_t family)
 	: m_handle(queue), m_family(family)

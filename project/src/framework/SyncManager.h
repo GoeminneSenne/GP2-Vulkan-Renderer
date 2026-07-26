@@ -4,11 +4,38 @@
 
 #include <vector>
 
-#include "Semaphore.h"
-#include "Fence.h"
-
 namespace dae
 {
+	struct Context;
+
+	class Semaphore final
+	{
+	public:
+		void Create(const Context& context);
+		void Destroy(const Context& context) const;
+
+		VkSemaphore GetHandle() const;
+
+	private:
+		VkSemaphore m_handle = VK_NULL_HANDLE;
+	};
+
+	class Fence final
+	{
+	public:
+		Fence() = default;
+
+		void Create(const Context& context);
+		void Destroy(const Context& context) const;
+		void Wait(const Context& context) const;
+		void Reset(const Context& context) const;
+
+		VkFence GetHandle() const;
+
+	private:
+		VkFence m_handle = VK_NULL_HANDLE;
+	};
+
 	class SyncManager final
 	{
 	public:

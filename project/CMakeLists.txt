@@ -9,8 +9,7 @@ set(FRAMEWORK_SOURCES
 	src/framework/Image.cpp
 	src/framework/Shader.cpp
 	src/framework/Sampler.cpp
-	src/framework/Fence.cpp
-	src/framework/Semaphore.cpp
+	
 	src/framework/Queue.cpp
 	src/framework/RenderPass.cpp
 	src/framework/Context.cpp
@@ -24,7 +23,7 @@ set(FRAMEWORK_SOURCES
 	src/framework/Mesh.cpp
 	src/framework/SyncManager.cpp
 	src/framework/GLTFLoader.cpp
- "src/framework/Camera.cpp")
+	src/framework/Camera.cpp)
 
 add_library(Vulkan_Framework STATIC ${FRAMEWORK_SOURCES})
 target_compile_features(Vulkan_Framework PUBLIC cxx_std_20)
@@ -35,7 +34,7 @@ set(SOURCES
 	src/application/main.cpp
 	src/application/VulkanDemoApplication.cpp
 	src/application/SponzaApplication.cpp
- "src/application/RenderPassExample.cpp")
+	src/application/RenderPassExample.cpp)
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})

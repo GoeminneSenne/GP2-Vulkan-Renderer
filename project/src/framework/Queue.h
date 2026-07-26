@@ -1,12 +1,10 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
-#include "Fence.h"
+#include "SyncManager.h"
 
 namespace dae
 {
-	class Fence;
-
 	class Queue final
 	{
 	public:
