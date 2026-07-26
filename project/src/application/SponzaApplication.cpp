@@ -141,14 +141,12 @@ void dae::SponzaApplication::Init()
     // --- Uniform Buffers --------------------------
     {
         m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
-            BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize),
-
-            vmaMapMemory(m_context.allocator, m_uniformBuffers[i].allocation, &uniformBuffersMapped[i]);
+            BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize);
+            m_applicationDeletionQueue.PushDeletor([&, i]() {m_uniformBuffers[i].Destroy(m_context); });
         }
     }
     // --- Descriptor Pool --------------------------
@@ -309,12 +307,6 @@ void dae::SponzaApplication::Cleanup()
 {
     vkDeviceWaitIdle(m_context.logicalDevice.handle);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-    {
-        vmaUnmapMemory(m_context.allocator, m_uniformBuffers[i].allocation);
-        m_uniformBuffers[i].Destroy(m_context);
-    }
-
     m_resizeDeletionQueue.Flush();
     m_applicationDeletionQueue.Flush();
 }
@@ -438,5 +430,5 @@ void dae::SponzaApplication::UpdateViewProjectionUBO(uint32_t currentImage)
         m_camera.projectionMatrix
 	};
 
-    memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+    memcpy(m_uniformBuffers[currentImage].mappedData, &ubo, sizeof(ubo));
 }

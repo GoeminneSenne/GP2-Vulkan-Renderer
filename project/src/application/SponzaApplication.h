@@ -77,8 +77,7 @@ namespace dae
 
         Scene m_scene{};
 
-        std::vector<Buffer> m_uniformBuffers;
-        std::vector<void*> uniformBuffersMapped;
+        std::vector<UniformBuffer> m_uniformBuffers;
 
         Image m_textureImage{};
         Sampler m_sampler{};

@@ -6,13 +6,21 @@
 
 namespace dae
 {
-	struct Buffer final
+	struct Buffer
 	{
 		VkBuffer handle = VK_NULL_HANDLE;
 		VmaAllocation allocation = nullptr;
 		VkDeviceSize size = 0;
 		VmaAllocationInfo allocInfo = {};
 
-		void Destroy(const Context& context) const;
+		virtual ~Buffer() = default;
+		virtual void Destroy(const Context& context) const;
+	};
+
+	struct UniformBuffer : public Buffer
+	{
+		void* mappedData{};
+
+		virtual void Destroy(const Context& context) const override;
 	};
 }
