@@ -103,18 +103,37 @@ void dae::SponzaApplication::Init()
             .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
             .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
             .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
+            .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
             .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
             .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
             .Build(m_context, m_graphicsPipeline);
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipeline.Destroy(m_context); });
 
-
-        fragmentShader.Destroy(m_context);
-        vertexShader.Destroy(m_context);
-
     }
+
+    // --- Depth Prepass Pipeline ------------------------
+    {
+	    GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_graphicsPipelineLayout)
+            .UseDynamicRendering(true)
+            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
+            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
+            .AddVertexInputBindingDescription((Vertex::GetBindingDescription()))
+            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
+            .Build(m_context, m_prepassPipeline);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_prepassPipeline.Destroy(m_context); });
+    }
+
+    fragmentShader.Destroy(m_context);
+    vertexShader.Destroy(m_context);
+
     // --- Depth Resources --------------------------
     {
 	    DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_depthImage);
@@ -360,7 +379,60 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
         VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
-    //Set attachments for dynamic rendering
+    //Dynamic States
+    VkViewport viewport{};
+    viewport.x = 0.f;
+    viewport.y = 0.f;
+    viewport.width = static_cast<float>(m_swapchain.extent.width);
+    viewport.height = static_cast<float>(m_swapchain.extent.height);
+    viewport.minDepth = 0.f;
+    viewport.maxDepth = 1.f;
+
+    VkRect2D scissor{};
+    scissor.offset = { 0,0 };
+    scissor.extent = m_swapchain.extent;
+
+    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
+
+    //Depth Prepass
+    VkRenderingAttachmentInfo prepassAttachment{};
+    prepassAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    prepassAttachment.imageView = m_depthImage.view;
+    prepassAttachment.imageLayout = m_depthImage.layout;
+    prepassAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    prepassAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    prepassAttachment.clearValue = depthClearValue;
+
+    VkRenderingInfo prepassRenderInfo{};
+    prepassRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    prepassRenderInfo.renderArea = scissor;
+    prepassRenderInfo.layerCount = 1;
+    prepassRenderInfo.colorAttachmentCount = 0;
+    prepassRenderInfo.pColorAttachments = nullptr;
+    prepassRenderInfo.pDepthAttachment = &prepassAttachment;
+    prepassRenderInfo.pStencilAttachment = nullptr;
+
+    vkCmdBeginRendering(commandBuffer.handle, &prepassRenderInfo);
+
+    //Bind prepass pipeline & states
+    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_prepassPipeline.handle);
+    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
+
+    //Render scene
+    m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
+
+    vkCmdEndRendering(commandBuffer.handle);
+    
+    //Insert barrier so prepass is done writing before the main rendering starts
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_depthImage, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
+
+	//-----------------------------------------------------------
+	//Set attachments for dynamic rendering
     VkRenderingAttachmentInfo colorAttachment{};
     colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     colorAttachment.imageView = swapchainImage.view;
@@ -373,7 +445,7 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     depthAttachment.imageView = m_depthImage.view;
     depthAttachment.imageLayout = m_depthImage.layout;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachment.clearValue = depthClearValue;
 
@@ -390,24 +462,9 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
 
     //Bind data
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
-
-    VkViewport viewport{};
-    viewport.x = 0.f;
-    viewport.y = 0.f;
-    viewport.width = static_cast<float>(m_swapchain.extent.width);
-    viewport.height = static_cast<float>(m_swapchain.extent.height);
-    viewport.minDepth = 0.f;
-    viewport.maxDepth = 1.f;
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = { 0,0 };
-    scissor.extent = m_swapchain.extent;
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-
-    uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
     //Render scene

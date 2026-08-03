@@ -71,6 +71,8 @@ namespace dae
         PipelineLayout m_graphicsPipelineLayout{};
         GraphicsPipeline m_graphicsPipeline{};
 
+        GraphicsPipeline m_prepassPipeline{};
+
         std::vector<CommandBuffer> m_renderCommandBuffers;
 
         SyncManager m_syncManager{};
