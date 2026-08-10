@@ -24,7 +24,7 @@ set(FRAMEWORK_SOURCES
 	src/framework/SyncManager.cpp
 	src/framework/GLTFLoader.cpp
 	src/framework/Camera.cpp)
-
+	
 add_library(Vulkan_Framework STATIC ${FRAMEWORK_SOURCES})
 target_compile_features(Vulkan_Framework PUBLIC cxx_std_20)
 target_include_directories(Vulkan_Framework PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

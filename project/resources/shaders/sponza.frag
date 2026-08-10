@@ -1,5 +1,7 @@
 #version 450
 
+layout(early_fragment_tests) in;
+
 layout(constant_id = 0) const uint TEXTURE_ARRAY_SIZE = 25;
 layout(set = 0, binding = 0) uniform sampler2D texSamplers[TEXTURE_ARRAY_SIZE];
 
@@ -17,9 +19,12 @@ layout(push_constant) uniform constants
 
 void main() 
 {
-    outColor = texture(texSamplers[pushConstants.textureIndex], fragTexCoord);
+	vec4 baseColor = texture(texSamplers[pushConstants.textureIndex], fragTexCoord);
 
+	//Alpha Clipping
 	const float alphaThreshold = 0.95f;
-	if(outColor.a < alphaThreshold)
+	if(baseColor.a < alphaThreshold)
 		discard;
+
+	outColor = baseColor;
 }

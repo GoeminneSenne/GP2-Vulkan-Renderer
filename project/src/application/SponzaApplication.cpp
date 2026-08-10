@@ -114,12 +114,19 @@ void dae::SponzaApplication::Init()
 
     // --- Depth Prepass Pipeline ------------------------
     {
+        Shader prepassFragmentShader{};
+        ShaderLoader loader{};
+        loader
+            .SetFilename("resources/shaders/prepass.frag.spv")
+            .Load(m_context, prepassFragmentShader);
+
 	    GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
             .SetPipelineLayout(m_graphicsPipelineLayout)
             .UseDynamicRendering(true)
             .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
             .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+			.SetShader(prepassFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
             .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
             .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
             .SetPolygonMode(VK_POLYGON_MODE_FILL)
@@ -129,6 +136,7 @@ void dae::SponzaApplication::Init()
             .Build(m_context, m_prepassPipeline);
 
         m_applicationDeletionQueue.PushDeletor([&]() {m_prepassPipeline.Destroy(m_context); });
+        prepassFragmentShader.Destroy(m_context);
     }
 
     fragmentShader.Destroy(m_context);
@@ -422,7 +430,7 @@ void dae::SponzaApplication::RecordRenderCommandBuffer(CommandBuffer& commandBuf
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
     //Render scene
-    m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
+    m_scene.RecordDraw(commandBuffer, m_prepassPipeline);
 
     vkCmdEndRendering(commandBuffer.handle);
     
