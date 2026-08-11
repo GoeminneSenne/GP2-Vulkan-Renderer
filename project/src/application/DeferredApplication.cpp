@@ -144,6 +144,33 @@ void dae::DeferredApplication::Init()
 
     // --- GBuffer Resources --------------------------
     {
+        //Albedo Image
+        ImageBuilder imageBuilder{};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .Build(m_context, m_gBuffer.albedoImage);
+
+        //Normal Image
+        imageBuilder = {};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .Build(m_context, m_gBuffer.normalImage);
+
+        //Depth Image
         DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
         m_applicationDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
     }
