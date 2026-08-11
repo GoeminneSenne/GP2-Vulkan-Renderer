@@ -34,7 +34,7 @@ set(SOURCES
 	src/application/main.cpp
 	src/application/VulkanDemoApplication.cpp
 	src/application/SponzaApplication.cpp
-	src/application/RenderPassExample.cpp)
+	src/application/RenderPassExample.cpp "src/application/DeferredApplication.cpp")
 
 #Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
