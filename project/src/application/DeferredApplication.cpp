@@ -80,8 +80,40 @@ void dae::DeferredApplication::Init()
             .SetFilename("resources/shaders/geometry.frag.spv")
             .Load(m_context, fragmentShader);
     }
+    // --- GBuffer Resources --------------------------
+    {
+        //Albedo Image
+        ImageBuilder imageBuilder{};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .Build(m_context, m_gBuffer.albedoImage);
 
-    // --- Graphics Pipeline ------------------------
+        //Normal Image
+        imageBuilder = {};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .Build(m_context, m_gBuffer.normalImage);
+
+        //Depth Image
+        DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
+    }
+
+    // --- Geometry Pipeline ------------------------
     {
         PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
@@ -96,7 +128,8 @@ void dae::DeferredApplication::Init()
         pipelineBuilder
             .SetPipelineLayout(m_graphicsPipelineLayout)
             .UseDynamicRendering(true)
-            .AddColorAttachment(m_swapchain.imageFormat)
+            .AddColorAttachment(m_gBuffer.albedoImage.format)
+            .AddColorAttachment(m_gBuffer.normalImage.format)
             .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
             .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
             .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -141,39 +174,6 @@ void dae::DeferredApplication::Init()
 
     fragmentShader.Destroy(m_context);
     vertexShader.Destroy(m_context);
-
-    // --- GBuffer Resources --------------------------
-    {
-        //Albedo Image
-        ImageBuilder imageBuilder{};
-        imageBuilder
-            .SetWidth(m_swapchain.extent.width)
-            .SetHeight(m_swapchain.extent.height)
-            .SetMipLevels(1)
-            .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
-            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-            .Build(m_context, m_gBuffer.albedoImage);
-
-        //Normal Image
-        imageBuilder = {};
-        imageBuilder
-            .SetWidth(m_swapchain.extent.width)
-            .SetHeight(m_swapchain.extent.height)
-            .SetMipLevels(1)
-            .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-            .Build(m_context, m_gBuffer.normalImage);
-
-        //Depth Image
-        DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
-    }
 
     // --- Texture Sampler --------------------------
     {
@@ -414,6 +414,14 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
         VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+
     //Dynamic States
     VkViewport viewport{};
     viewport.x = 0.f;
@@ -467,14 +475,27 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
         VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
 
     //-----------------------------------------------------------
-    //Set attachments for dynamic rendering
+    //Set attachments for Geometry Pipeline
+    //Albedo Image
     VkRenderingAttachmentInfo colorAttachment{};
     colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    colorAttachment.imageView = swapchainImage.view;
-    colorAttachment.imageLayout = swapchainImage.layout;
+    colorAttachment.imageView = m_gBuffer.albedoImage.view;
+    colorAttachment.imageLayout = m_gBuffer.albedoImage.layout;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.clearValue = colorClearValue;
+
+    VkRenderingAttachmentInfo normalAttachment{};
+    normalAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    normalAttachment.imageView = m_gBuffer.normalImage.view;
+    normalAttachment.imageLayout = m_gBuffer.normalImage.layout;
+    normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+    std::vector<VkRenderingAttachmentInfo> colorAttachments{
+        colorAttachment,
+        normalAttachment
+    };
 
     VkRenderingAttachmentInfo depthAttachment{};
     depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -488,8 +509,8 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     renderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
     renderInfo.layerCount = 1;
-    renderInfo.colorAttachmentCount = 1;
-    renderInfo.pColorAttachments = &colorAttachment;
+    renderInfo.colorAttachmentCount = colorAttachments.size();
+    renderInfo.pColorAttachments = colorAttachments.data();
     renderInfo.pDepthAttachment = &depthAttachment;
     renderInfo.pStencilAttachment = nullptr;
 
@@ -506,6 +527,14 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
 
     vkCmdEndRendering(commandBuffer.handle);
+
+    //Transition G Buffer images to SHADER READ ONLY
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
 
     //Present image memory barrier
     ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
