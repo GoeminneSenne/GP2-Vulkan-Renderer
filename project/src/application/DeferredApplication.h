@@ -68,10 +68,13 @@ namespace dae
         DescriptorPool m_descriptorPool;
         DescriptorSet m_globalDescriptorSet{};
         std::vector<DescriptorSet> m_frameDescriptorSets;
-        PipelineLayout m_graphicsPipelineLayout{};
-        GraphicsPipeline m_graphicsPipeline{};
 
+        PipelineLayout m_geometryPipelineLayout{};
+        GraphicsPipeline m_geometryPipeline{};
         GraphicsPipeline m_prepassPipeline{};
+
+        PipelineLayout m_deferredPipelineLayout{};
+        GraphicsPipeline m_deferredPipeline{};
 
         std::vector<CommandBuffer> m_renderCommandBuffers;
 

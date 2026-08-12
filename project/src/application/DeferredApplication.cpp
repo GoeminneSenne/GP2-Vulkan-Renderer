@@ -52,21 +52,23 @@ void dae::DeferredApplication::Init()
     }
 
     // --- DescriptorSetLayouts ----------------------
+    {
 
     DescriptorSetLayoutBuilder layoutBuilder{};
 
-    //Frame data set
-    layoutBuilder
-        .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-        .Build(m_context, m_frameDataSetLayout);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
+        //Frame data set
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+            .Build(m_context, m_frameDataSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
 
-    //Global data set
-    layoutBuilder
-        //Ideally this is split so you don't link the sampler for every image
-        .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
-        .Build(m_context, m_globalDataSetLayout);
-    m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
+        //Global data set
+        layoutBuilder
+            //Ideally this is split so you don't link the sampler for every image
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
+            .Build(m_context, m_globalDataSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
+    }
 
     // --- Shaders ----------------------------------
     Shader vertexShader, fragmentShader;
@@ -120,13 +122,13 @@ void dae::DeferredApplication::Init()
             .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
             .AddDescriptorSetLayout(m_globalDataSetLayout)
             .AddDescriptorSetLayout(m_frameDataSetLayout)
-            .Build(m_context, m_graphicsPipelineLayout);
+            .Build(m_context, m_geometryPipelineLayout);
 
-        m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipelineLayout.Destroy(m_context); });
+        m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipelineLayout.Destroy(m_context); });
 
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
-            .SetPipelineLayout(m_graphicsPipelineLayout)
+            .SetPipelineLayout(m_geometryPipelineLayout)
             .UseDynamicRendering(true)
             .AddColorAttachment(m_gBuffer.albedoImage.format)
             .AddColorAttachment(m_gBuffer.normalImage.format)
@@ -139,9 +141,9 @@ void dae::DeferredApplication::Init()
             .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
             .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
             .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-            .Build(m_context, m_graphicsPipeline);
+            .Build(m_context, m_geometryPipeline);
 
-        m_applicationDeletionQueue.PushDeletor([&]() {m_graphicsPipeline.Destroy(m_context); });
+        m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipeline.Destroy(m_context); });
 
     }
 
@@ -155,7 +157,7 @@ void dae::DeferredApplication::Init()
 
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
-            .SetPipelineLayout(m_graphicsPipelineLayout)
+            .SetPipelineLayout(m_geometryPipelineLayout)
             .UseDynamicRendering(true)
             .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
             .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
@@ -174,6 +176,41 @@ void dae::DeferredApplication::Init()
 
     fragmentShader.Destroy(m_context);
     vertexShader.Destroy(m_context);
+
+    // --- Deferred Graphics Pipeline ---------------
+    {
+        PipelineLayoutBuilder layoutBuilder = {};
+        layoutBuilder
+            .Build(m_context, m_deferredPipelineLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context);});
+
+        Shader deferredVertexShader, deferredFragmentShader;
+        ShaderLoader loader = {};
+        loader
+            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
+            .Load(m_context, deferredVertexShader);
+        loader
+            .SetFilename("resources/shaders/deferred_lighting.frag.spv")
+            .Load(m_context, deferredFragmentShader);
+        
+
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_deferredPipelineLayout)
+            .UseDynamicRendering(true)
+            .AddColorAttachment(m_swapchain.imageFormat)
+            .SetShader(deferredVertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(deferredFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
+            .Build(m_context, m_deferredPipeline);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipeline.Destroy(m_context);});
+        deferredVertexShader.Destroy(m_context);
+        deferredFragmentShader.Destroy(m_context);
+    }
 
     // --- Texture Sampler --------------------------
     {
@@ -461,8 +498,8 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_prepassPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
     //Render scene
     m_scene.RecordDraw(commandBuffer, m_prepassPipeline);
@@ -517,14 +554,14 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBeginRendering(commandBuffer.handle, &renderInfo);
 
     //Bind data
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline.handle);
+    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
 
     //Render scene
-    m_scene.RecordDraw(commandBuffer, m_graphicsPipeline);
+    m_scene.RecordDraw(commandBuffer, m_geometryPipeline);
 
     vkCmdEndRendering(commandBuffer.handle);
 
@@ -535,6 +572,34 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    
+    // Deferred Pipeline Rendering
+    VkClearValue deferredClearValue{ .color = {1.f, 0.f, 1.f, 1.f} };
+
+
+    VkRenderingAttachmentInfo deferredColorAttachment{};
+    deferredColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    deferredColorAttachment.imageView = swapchainImage.view;
+    deferredColorAttachment.imageLayout = swapchainImage.layout;
+    deferredColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    deferredColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    deferredColorAttachment.clearValue = deferredClearValue;
+
+    VkRenderingInfo deferredRenderInfo{};
+    deferredRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    deferredRenderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
+    deferredRenderInfo.layerCount = 1;
+    deferredRenderInfo.colorAttachmentCount = 1;
+    deferredRenderInfo.pColorAttachments = &deferredColorAttachment;
+    
+    vkCmdBeginRendering(commandBuffer.handle, &deferredRenderInfo);
+
+    //Bind data
+    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
+    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+    vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
+    vkCmdEndRendering(commandBuffer.handle);
 
     //Present image memory barrier
     ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
