@@ -42,10 +42,12 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteBuffer(uint32_t binding
 dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding, VkImageLayout layout,
 	const Image& image, const Sampler& sampler)
 {
-	m_imageInfo = {};
-	m_imageInfo.imageLayout = layout;
-	m_imageInfo.imageView = image.view;
-	m_imageInfo.sampler = sampler.handle;
+	VkDescriptorImageInfo imageInfo{};
+	imageInfo.imageLayout = layout;
+	imageInfo.imageView = image.view;
+	imageInfo.sampler = sampler.handle;
+
+	m_imageInfos.push_back(imageInfo);
 
 	VkWriteDescriptorSet write{};
 	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -54,7 +56,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 	write.dstArrayElement = 0;
 	write.descriptorType = m_target->pLayout->bindings[binding].type;
 	write.descriptorCount = 1;
-	write.pImageInfo = &m_imageInfo;
+	write.pImageInfo = &m_imageInfos.back();
 
 	m_writes.push_back(write);
 	return *this;
