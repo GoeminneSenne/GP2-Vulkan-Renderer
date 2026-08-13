@@ -63,11 +63,19 @@ void dae::DeferredApplication::Init()
         m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
 
         //Global data set
+        layoutBuilder = {};
         layoutBuilder
             //Ideally this is split so you don't link the sampler for every image
             .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
             .Build(m_context, m_globalDataSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
+    
+        //Deferred Pipeline set
+        layoutBuilder = {};
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .Build(m_context, m_deferredSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredSetLayout.Destroy(m_context); });
     }
 
     // --- Shaders ----------------------------------
@@ -181,6 +189,7 @@ void dae::DeferredApplication::Init()
     {
         PipelineLayoutBuilder layoutBuilder = {};
         layoutBuilder
+            .AddDescriptorSetLayout(m_deferredSetLayout)
             .Build(m_context, m_deferredPipelineLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context);});
 
@@ -245,8 +254,9 @@ void dae::DeferredApplication::Init()
         std::vector<VkDescriptorPoolSize> poolSizes;
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 3);
 
-        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT + 1);
+        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT + 1 + 1);
         m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
     }
 
@@ -261,7 +271,7 @@ void dae::DeferredApplication::Init()
             .WriteImageArray(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_scene.textures, m_sampler)
             .UpdateTarget(m_context);
 
-
+        //frame descriptor set
         m_frameDescriptorSets = m_descriptorPool.Allocate(m_context, m_frameDataSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
@@ -272,6 +282,18 @@ void dae::DeferredApplication::Init()
                 .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
                 .UpdateTarget(m_context);
         }
+
+        //deferred descriptor set
+        m_deferredDescriptorSet = m_descriptorPool.Allocate(m_context, m_deferredSetLayout);
+
+        auto* pTarget = &m_deferredDescriptorSet;
+
+        DescriptorSetWriter deferredWriter{};
+        deferredWriter
+            .SetTarget(&m_deferredDescriptorSet)
+            .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
+            .UpdateTarget(m_context);
+
     }
 
     // --- Sync Manager -----------------------------
@@ -598,6 +620,7 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_deferredDescriptorSet.set, 0, nullptr);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
 

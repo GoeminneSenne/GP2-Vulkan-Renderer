@@ -2,9 +2,9 @@
 #include <iostream>
 
 //#define VULKAN_DEMO_APP
-//#define SPONZA_APP
 //#define RENDERPASS_EXAMPLE_APP
-#define DEFERRED_RENDERING_APPLICATION
+#define SPONZA_APP
+//#define DEFERRED_RENDERING_APPLICATION
 
 #ifdef VULKAN_DEMO_APP
 #include "VulkanDemoApplication.h"

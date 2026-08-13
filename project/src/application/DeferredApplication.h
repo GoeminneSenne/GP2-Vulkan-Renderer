@@ -73,6 +73,8 @@ namespace dae
         GraphicsPipeline m_geometryPipeline{};
         GraphicsPipeline m_prepassPipeline{};
 
+        DescriptorSetLayout m_deferredSetLayout{};
+        DescriptorSet m_deferredDescriptorSet{};
         PipelineLayout m_deferredPipelineLayout{};
         GraphicsPipeline m_deferredPipeline{};
 
