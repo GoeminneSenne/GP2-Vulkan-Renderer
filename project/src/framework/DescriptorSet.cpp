@@ -65,7 +65,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImage(uint32_t binding,
 dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImageArray(uint32_t binding, VkImageLayout layout, const std::vector<Image>& images,
 	const Sampler& sampler)
 {
-	m_imageInfos.resize(images.size());
+	m_imageArrayInfos.resize(images.size());
 
 	for (size_t idx{}; idx < images.size(); ++idx)
 	{
@@ -74,7 +74,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImageArray(uint32_t bin
 		imageInfo.imageView = images[idx].view;
 		imageInfo.imageLayout = layout;
 	
-		m_imageInfos[idx] = imageInfo;
+		m_imageArrayInfos[idx] = imageInfo;
 	}
 
 	VkWriteDescriptorSet write{};
@@ -84,7 +84,7 @@ dae::DescriptorSetWriter& dae::DescriptorSetWriter::WriteImageArray(uint32_t bin
 	write.dstArrayElement = 0;
 	write.descriptorType = m_target->pLayout->bindings[binding].type;
 	write.descriptorCount = (uint32_t)images.size();
-	write.pImageInfo = m_imageInfos.data();
+	write.pImageInfo = m_imageArrayInfos.data();
 
 	m_writes.push_back(write);
 	return *this;

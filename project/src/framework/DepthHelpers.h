@@ -59,7 +59,7 @@ namespace dae::DepthHelpers
 			.SetMipLevels(1)
 			.SetFormat(depthFormat)
 			.SetTiling(VK_IMAGE_TILING_OPTIMAL)
-			.SetUsageFlags(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+			.SetUsageFlags(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 			.SetAspectMask(aspectMask)
 			.SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
 			.SetAllocFlags(0)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -45,8 +46,8 @@ namespace dae
 	private:
 		DescriptorSet* m_target = nullptr;
 		VkDescriptorBufferInfo m_bufferInfo{};
-		VkDescriptorImageInfo m_imageInfo{}; //Keeping for single Writes, should be removed in end result
-		std::vector<VkDescriptorImageInfo> m_imageInfos{};
+		std::deque<VkDescriptorImageInfo> m_imageInfos{};
+		std::vector<VkDescriptorImageInfo> m_imageArrayInfos{};
 		std::vector<VkWriteDescriptorSet> m_writes;
 	};
 

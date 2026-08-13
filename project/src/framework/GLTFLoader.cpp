@@ -114,7 +114,7 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 				aiMesh->mNormals[idx].z
 			};
 
-			vertex.normal = glm::normalize(conversion * vertex.normal);
+			//vertex.normal = glm::normalize(conversion * vertex.normal);
 		}
 
 		if (aiMesh->HasTangentsAndBitangents())
@@ -126,7 +126,7 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 				aiMesh->mTangents[idx].z
 			};
 
-			vertex.tangent = glm::normalize(conversion * vertex.tangent);
+			//vertex.tangent = glm::normalize(conversion * vertex.tangent);
 		}
 
 		

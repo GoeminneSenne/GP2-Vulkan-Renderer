@@ -74,6 +74,8 @@ void dae::DeferredApplication::Init()
         layoutBuilder = {};
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+			.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+			.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .Build(m_context, m_deferredSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredSetLayout.Destroy(m_context); });
     }
@@ -292,6 +294,8 @@ void dae::DeferredApplication::Init()
         deferredWriter
             .SetTarget(&m_deferredDescriptorSet)
             .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
+			.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
+			.WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
             .UpdateTarget(m_context);
 
     }
@@ -445,8 +449,42 @@ void dae::DeferredApplication::HandleResize()
     m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context);});
 
     //Recreate depth image
-    m_gBuffer.depthImage.Destroy(m_context);
+//TODO cleanup this code
+    m_gBuffer.Destroy(m_context);
     DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
+
+    ImageBuilder imageBuilder{};
+    imageBuilder
+        .SetWidth(m_swapchain.extent.width)
+        .SetHeight(m_swapchain.extent.height)
+        .SetMipLevels(1)
+        .SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
+        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+        .Build(m_context, m_gBuffer.albedoImage);
+
+    //Normal Image
+    imageBuilder = {};
+    imageBuilder
+        .SetWidth(m_swapchain.extent.width)
+        .SetHeight(m_swapchain.extent.height)
+        .SetMipLevels(1)
+        .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+        .Build(m_context, m_gBuffer.normalImage);
+
+    DescriptorSetWriter deferredWriter{};
+    deferredWriter
+        .SetTarget(&m_deferredDescriptorSet)
+        .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
+        .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
+        .WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
+        .UpdateTarget(m_context);
 
     //Recreate RenderFinishedSemaphores
     m_syncManager.RecreateRenderFinishedSemaphores(m_context, static_cast<uint32_t>(m_swapchain.images.size()));
@@ -595,6 +633,11 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
         VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
         VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
     
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+     
+
     // Deferred Pipeline Rendering
     VkClearValue deferredClearValue{ .color = {1.f, 0.f, 1.f, 1.f} };
 
