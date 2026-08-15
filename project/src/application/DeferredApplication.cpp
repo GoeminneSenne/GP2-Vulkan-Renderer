@@ -458,7 +458,7 @@ void dae::DeferredApplication::HandleResize()
         .SetWidth(m_swapchain.extent.width)
         .SetHeight(m_swapchain.extent.height)
         .SetMipLevels(1)
-        .SetFormat(VK_FORMAT_R8G8B8A8_SRGB) //TODO: check format 
+        .SetFormat(VK_FORMAT_R8G8B8A8_UNORM) //TODO: check format 
         .SetTiling(VK_IMAGE_TILING_OPTIMAL)
         .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
         .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
