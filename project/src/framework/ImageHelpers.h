@@ -166,19 +166,50 @@ namespace dae
 			image.layout = newLayout;
 		}
 
-		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
+
+		inline void CreateTexture(const Context& context, const std::string& path, VkFormat format, Image& image)
 		{
 			int texWidth, texHeight, texChannels;
-			stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-			VkDeviceSize imageSize = texWidth * texHeight * 4;
+			VkDeviceSize imageSize;
+		
+			stbi_uc* pixels8 = nullptr;
+			stbi_us* pixels16 = nullptr;
 
-			if (!pixels)
-				throw std::runtime_error("failed to load image: " + path);
+			if (format == VK_FORMAT_R16G16B16A16_UNORM)
+			{
+				pixels16 = stbi_load_16(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+				imageSize = texWidth * texHeight * 8;
+
+				if (!pixels16)
+				{
+					throw std::runtime_error("failed to load image: " + path);
+				}
+			}
+			else
+			{
+				pixels8 = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+				imageSize = texWidth * texHeight * 4;
+
+				if (!pixels8)
+				{
+					throw std::runtime_error("failed to load image: " + path);
+				}
+			}
 
 			Buffer stagingBuffer;
 			BufferHelpers::CreateStaging(context, stagingBuffer, imageSize);
-			BufferHelpers::UploadData(context, stagingBuffer, pixels, imageSize);
-			stbi_image_free(pixels);
+			
+			if (pixels8)
+			{
+				BufferHelpers::UploadData(context, stagingBuffer, pixels8, imageSize);
+				stbi_image_free(pixels8);
+			}
+			else
+			{
+				BufferHelpers::UploadData(context, stagingBuffer, pixels16, imageSize);
+				stbi_image_free(pixels16);
+			}
+
 
 			uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
@@ -187,7 +218,7 @@ namespace dae
 				.SetWidth(texWidth)
 				.SetHeight(texHeight)
 				.SetMipLevels(mipLevels)
-				.SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
+				.SetFormat(format)
 				.SetTiling(VK_IMAGE_TILING_OPTIMAL)
 				.SetUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 				.SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
@@ -213,9 +244,16 @@ namespace dae
 		}
 
 		//Filesystem overload
-		inline void CreateTexture(const Context& context, const std::filesystem::path& path, Image& image)
+		inline void CreateTexture(const Context& context, const std::filesystem::path& path, VkFormat format, Image& image)
 		{
-			CreateTexture(context, path.generic_string(), image);
+			CreateTexture(context, path.generic_string(), format, image);
 		}
+
+		//Overload without VkFormat to be backwards compatible with VulkanDemo app
+		inline void CreateTexture(const Context& context, const std::string& path, Image& image)
+		{
+			return CreateTexture(context, path, VK_FORMAT_R8G8B8A8_SRGB, image);
+		}
+
 	}
 }

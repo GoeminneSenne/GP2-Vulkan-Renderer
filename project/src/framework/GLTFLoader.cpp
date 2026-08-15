@@ -140,7 +140,6 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 
 	// --- Mesh construction ------------------------
 	mesh.materialIndex = aiMesh->mMaterialIndex;
-	mesh.textureIndex = outScene.materials[mesh.materialIndex].baseColor;
 
 	mesh.Upload(context, vertices, indices);
 	outScene.meshes.push_back(mesh);
@@ -155,22 +154,42 @@ uint32_t dae::GLTFLoader::ProcessMaterial(const Context& context, aiMaterial* ai
 	if (aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texName) == AI_SUCCESS)
 	{
 		auto fullPath = m_sceneDirectory / texName.C_Str();
-		mat.baseColor = LoadTexture(context, fullPath, outScene);
+		mat.albedoTexIndex = LoadTexture(context, fullPath, aiTextureType_BASE_COLOR, outScene);
+	}
+	if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &texName) == AI_SUCCESS)
+	{
+		auto fullPath = m_sceneDirectory / texName.C_Str();
+		mat.normalTexIndex = LoadTexture(context, fullPath, aiTextureType_NORMALS, outScene);
 	}
 
 	outScene.materials.push_back(mat);
 	return static_cast<uint32_t>(outScene.meshes.size() - 1);
 }
 
-uint32_t dae::GLTFLoader::LoadTexture(const Context& context, const std::filesystem::path& path, Scene& outScene)
+uint32_t dae::GLTFLoader::LoadTexture(const Context& context, const std::filesystem::path& path,
+	aiTextureType textureType, Scene& outScene)
 {
 	if (m_textureLookup.contains(path))
 	{
 		return m_textureLookup[path];
 	}
 
+	VkFormat format{};
+	switch (textureType)
+	{
+	case aiTextureType_BASE_COLOR:
+		format = VK_FORMAT_R8G8B8A8_SRGB;
+		break;
+	case aiTextureType_NORMALS:
+		format = VK_FORMAT_R16G16B16A16_UNORM;
+		break;
+	default:
+		format = VK_FORMAT_R8G8B8A8_UNORM;
+		break;
+	}
+
 	Image tex;
-	ImageHelpers::CreateTexture(context, path, tex);
+	ImageHelpers::CreateTexture(context, path, format, tex);
 	outScene.textures.push_back(tex);
 
 	uint32_t texIndex = static_cast<uint32_t>(outScene.textures.size() - 1);

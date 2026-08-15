@@ -16,8 +16,9 @@ namespace dae
 	// --- Push Constants -----------------------------
 	struct PushConstants
 	{
-		alignas(16) glm::mat4 model;
-		uint32_t textureIndex;
+		alignas(16) glm::mat4 model{};
+		uint32_t albedoTexIndex{};
+		uint32_t normalTexIndex{};
 	};
 
 	// --- G Buffer -----------------------------------

@@ -2,7 +2,7 @@
 
 layout(early_fragment_tests) in;
 
-layout(constant_id = 0) const uint TEXTURE_ARRAY_SIZE = 25;
+layout(constant_id = 0) const uint TEXTURE_ARRAY_SIZE = 49;
 layout(set = 0, binding = 0) uniform sampler2D texSamplers[TEXTURE_ARRAY_SIZE];
 
 layout(location = 0) in vec3 fragColor;
@@ -15,13 +15,14 @@ layout(location = 1) out vec3 outNormal;
 layout(push_constant) uniform constants
 {
 	mat4 model;
-	uint textureIndex;
+	uint albedoTexIndex;
+	uint normalTexIndex;
 } pushConstants;
 
 
 void main() 
 {
-	vec4 baseColor = texture(texSamplers[pushConstants.textureIndex], fragTexCoord);
+	vec4 baseColor = texture(texSamplers[pushConstants.albedoTexIndex], fragTexCoord);
 
 	//Alpha Clipping
 	const float alphaThreshold = 0.95f;

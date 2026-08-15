@@ -129,9 +129,9 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 	vkCmdDrawIndexed(command.handle, indexCount, 1, 0, 0, 0);
 }
 
-void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform) const
+void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform, const std::vector<Material>& materials) const
 {
-	PushConstants modelPC{ transform, textureIndex };
+	PushConstants modelPC{ transform, materials[materialIndex].albedoTexIndex, materials[materialIndex].normalTexIndex};
 	vkCmdPushConstants(command.handle, pipeline.layout->handle, VK_SHADER_STAGE_VERTEX_BIT |VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(modelPC), &modelPC);
 
 	RecordDraw(command);
@@ -140,22 +140,22 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline&
 
 void dae::Scene::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline) const
 {
-	DrawNode(command, nodes[rootNode], pipeline, glm::mat4(1));
+	DrawNode(command, nodes[rootNode], pipeline, glm::mat4(1), materials);
 }
 
 void dae::Scene::DrawNode(const CommandBuffer& command, const Node& node, const GraphicsPipeline& pipeline,
-                          const glm::mat4& parentTransform) const
+                          const glm::mat4& parentTransform, const std::vector<Material>& materials) const
 {
 	glm::mat4 globalTransform = parentTransform * node.transform;
 
 	for (const auto& meshIndex : node.meshIndices)
 	{
-		meshes[meshIndex].RecordDraw(command, pipeline, globalTransform);
+		meshes[meshIndex].RecordDraw(command, pipeline, globalTransform, materials);
 	}
 
 	for (const auto& childIndex : node.children)
 	{
-		DrawNode(command, nodes[childIndex], pipeline, globalTransform);
+		DrawNode(command, nodes[childIndex], pipeline, globalTransform, materials);
 	}
 }
 
