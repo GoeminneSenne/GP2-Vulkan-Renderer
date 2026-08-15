@@ -10,12 +10,9 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-vec3 normal = normalize(texture(gNormal, texCoord).rgb);
-
-vec3 direction = normalize(vec3(0, 0, 1.0));
-
-float value = dot(normal, direction);
-value = value * 0.5 + 0.5;
-
-outColor = vec4(value, value, value, 1.0);
+	vec3 normal = (texture(gNormal, texCoord).rgb);
+	vec3 normalColor = normal * 0.5 + 0.5;
+	
+	//outColor = vec4(normalColor, 1.0);
+	outColor = vec4(pow(normalColor, vec3(2.2)), 1.0);
 }

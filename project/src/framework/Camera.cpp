@@ -15,9 +15,9 @@ glm::mat4 dae::Camera::CalculateViewMatrix()
 {
 	glm::mat4 rotation = CalculateRotationMatrix();
 
-	forward = glm::vec3(rotation * glm::vec4(0, 1, 0, 0));
-	up = glm::vec3(rotation * glm::vec4(0, 0, 1, 0));
-	right = glm::vec3(rotation * glm::vec4(1, 0, 0, 0));
+	forward = glm::vec3(rotation * glm::vec4(0, 0, 1, 0));
+	up = glm::vec3(rotation * glm::vec4(0, 1, 0, 0));
+	right = glm::vec3(rotation * glm::vec4(-1, 0, 0, 0));
 
 	viewMatrix = glm::lookAt(origin, origin + forward, up);
 	return viewMatrix;
@@ -25,7 +25,7 @@ glm::mat4 dae::Camera::CalculateViewMatrix()
 
 glm::mat4 dae::Camera::CalculateRotationMatrix() const
 {
-	glm::quat yawRotation = glm::angleAxis(totalYaw, glm::vec3(0, 0, 1));
+	glm::quat yawRotation = glm::angleAxis(totalYaw, glm::vec3(0, 1, 0));
 	glm::quat pitchRotation = glm::angleAxis(totalPitch, glm::vec3(1, 0, 0));
 
 	return glm::toMat4(yawRotation * pitchRotation);
@@ -100,7 +100,7 @@ void dae::Camera::Update(const Timer& timer, const Window& window)
 	else if (rightClick)
 	{
 		//Rotate the viewport camera
-		totalPitch -= static_cast<float>(deltaY) * rotationSpeed * deltaTime;
+		totalPitch += static_cast<float>(deltaY) * rotationSpeed * deltaTime;
 		totalYaw -= static_cast<float>(deltaX) * rotationSpeed * deltaTime;
 	}
 

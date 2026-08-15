@@ -24,11 +24,13 @@ namespace dae
 			std::filesystem::path m_sceneDirectory{};
 			std::unordered_map<std::filesystem::path, uint32_t> m_textureLookup{};
 
+			/*
 			constexpr static glm::mat4 GLTF_CONVERSION_MATRIX{
 				1,0,0,0,
 				0,0,1,0,
 				0,-1,0,0,
 				0,0,0,1
 			};
+			*/
 	};
 }

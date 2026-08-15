@@ -38,7 +38,7 @@ dae::Scene dae::GLTFLoader::LoadScene(const Context& context, const std::string&
 
 	outScene.rootNode = ProcessNode(context, scene->mRootNode, scene, outScene);
 	auto& rootTransform = outScene.nodes[outScene.rootNode].transform;
-	rootTransform = GLTF_CONVERSION_MATRIX * rootTransform;
+	//rootTransform = GLTF_CONVERSION_MATRIX * rootTransform;
 
 	std::cout << "Scene has " <<  scene->mNumMeshes << " meshes" << "\n";
 	std::cout << "Scene has " <<  scene->mNumMaterials << " materials" << "\n";
@@ -81,9 +81,6 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 	vertices.reserve(aiMesh->mNumVertices);
 	indices.resize(aiMesh->mNumFaces * 3);
 
-	//Used to translate vertex normals & tangents to correct axis system
-	constexpr glm::mat3 conversion = glm::mat3(GLTF_CONVERSION_MATRIX);
-
 	// --- Vertices ------------------------
 	for (uint32_t idx{}; idx < aiMesh->mNumVertices; ++idx)
 	{
@@ -113,8 +110,6 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 				aiMesh->mNormals[idx].y,
 				aiMesh->mNormals[idx].z
 			};
-
-			//vertex.normal = glm::normalize(conversion * vertex.normal);
 		}
 
 		if (aiMesh->HasTangentsAndBitangents())
@@ -126,7 +121,6 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 				aiMesh->mTangents[idx].z
 			};
 
-			//vertex.tangent = glm::normalize(conversion * vertex.tangent);
 		}
 
 		
