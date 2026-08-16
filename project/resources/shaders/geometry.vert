@@ -21,11 +21,14 @@ layout(location = 4) in vec3 inTangent;
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 fragNormal;
+layout(location = 3) out vec3 fragTangent;
 
 void main()
 {
 	gl_Position = viewProj.proj * viewProj.view * pushConstants.model * vec4(inPosition, 1.0);
 	fragColor = inColor;
 	fragTexCoord = inTexCoord;
-	fragNormal = normalize(mat3(transpose(inverse(pushConstants.model))) * inNormal);
+	//fragNormal = normalize(mat3(transpose(inverse(pushConstants.model))) * inNormal);
+	fragNormal = normalize(mat3(pushConstants.model) * inNormal);
+	fragTangent = normalize(mat3(pushConstants.model) * inTangent);
 }
