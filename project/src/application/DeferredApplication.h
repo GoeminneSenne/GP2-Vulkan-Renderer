@@ -78,13 +78,19 @@ namespace dae
         PipelineLayout m_deferredPipelineLayout{};
         GraphicsPipeline m_deferredPipeline{};
 
+        DescriptorSetLayout m_deferredCameraSetLayout{};
+        std::vector<DescriptorSet> m_deferredCameraSets{};
+        std::vector<UniformBuffer> m_viewProjUBOs;
+
         std::vector<CommandBuffer> m_renderCommandBuffers;
 
         SyncManager m_syncManager{};
 
         Scene m_scene{};
 
-        std::vector<UniformBuffer> m_uniformBuffers;
+
+
+        std::vector<UniformBuffer> m_deferredCameraDataUBOs;
 
         Image m_textureImage{};
         Sampler m_sampler{};

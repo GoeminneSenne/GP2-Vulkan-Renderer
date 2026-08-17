@@ -14,10 +14,10 @@ void main()
 	vec3 normal = (texture(gNormal, texCoord).rgb);
 	vec3 normalColor = normal * 0.5 + 0.5;
 	
-	//outColor = texture(gAlbedo, texCoord);
+	outColor = texture(gAlbedo, texCoord);
 	//outColor = vec4(pow(normalColor, vec3(2.2)), 1.0); //normal debugging
 
 
-	vec4 metalRoughness = texture(gMetallicRougness, texCoord);
-	outColor = metalRoughness;
+	//vec4 metalRoughness = texture(gMetallicRougness, texCoord);
+	//outColor = metalRoughness;
 }

@@ -79,6 +79,13 @@ void dae::DeferredApplication::Init()
             .AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .Build(m_context, m_deferredSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredSetLayout.Destroy(m_context); });
+    
+        //Deferrd Camera Data sets
+        layoutBuilder = {};
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .Build(m_context, m_deferredCameraSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredCameraSetLayout.Destroy(m_context); });
     }
 
     // --- Shaders ----------------------------------
@@ -208,6 +215,7 @@ void dae::DeferredApplication::Init()
         PipelineLayoutBuilder layoutBuilder = {};
         layoutBuilder
             .AddDescriptorSetLayout(m_deferredSetLayout)
+            .AddDescriptorSetLayout(m_deferredCameraSetLayout)
             .Build(m_context, m_deferredPipelineLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context);});
 
@@ -258,23 +266,32 @@ void dae::DeferredApplication::Init()
 
     // --- Uniform Buffers --------------------------
     {
-        m_uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+        m_viewProjUBOs.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
-            BufferHelpers::CreateUniform(m_context, m_uniformBuffers[i], bufferSize);
-            m_applicationDeletionQueue.PushDeletor([&, i]() {m_uniformBuffers[i].Destroy(m_context); });
+            BufferHelpers::CreateUniform(m_context, m_viewProjUBOs[i], bufferSize);
+            m_applicationDeletionQueue.PushDeletor([&, i]() {m_viewProjUBOs[i].Destroy(m_context); });
+        }
+
+        m_deferredCameraDataUBOs.resize(MAX_FRAMES_IN_FLIGHT);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            VkDeviceSize bufferSize = sizeof(CameraDataUBO);
+            BufferHelpers::CreateUniform(m_context, m_deferredCameraDataUBOs[i], bufferSize);
+            m_applicationDeletionQueue.PushDeletor([&, i]() {m_deferredCameraDataUBOs[i].Destroy(m_context);});
         }
     }
     // --- Descriptor Pool --------------------------
     {
         std::vector<VkDescriptorPoolSize> poolSizes;
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4);
 
-        m_descriptorPool.Create(m_context, poolSizes, MAX_FRAMES_IN_FLIGHT + 1 + 1);
+        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 1 + 1);
         m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
     }
 
@@ -297,7 +314,7 @@ void dae::DeferredApplication::Init()
             DescriptorSetWriter writer = {};
             writer
                 .SetTarget(&m_frameDescriptorSets[i])
-                .WriteBuffer(0, m_uniformBuffers[i], 0, sizeof(ViewProjectionUBO))
+                .WriteBuffer(0, m_viewProjUBOs[i], 0, sizeof(ViewProjectionUBO))
                 .UpdateTarget(m_context);
         }
 
@@ -315,6 +332,16 @@ void dae::DeferredApplication::Init()
             .WriteImage(3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.metallicRoughnessImage, m_sampler)
             .UpdateTarget(m_context);
 
+        m_deferredCameraSets = m_descriptorPool.Allocate(m_context, m_deferredCameraSetLayout, MAX_FRAMES_IN_FLIGHT);
+
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        {
+            DescriptorSetWriter writer = {};
+            writer
+                .SetTarget(&m_deferredCameraSets[i])
+                .WriteBuffer(0, m_deferredCameraDataUBOs[i], 0, sizeof(CameraDataUBO))
+                .UpdateTarget(m_context);
+        }
     }
 
     // --- Sync Manager -----------------------------
@@ -710,6 +737,7 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_deferredDescriptorSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_deferredCameraSets[currentFrame].set, 0, nullptr);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
 
@@ -728,5 +756,5 @@ void dae::DeferredApplication::UpdateViewProjectionUBO(uint32_t currentImage)
         m_camera.projectionMatrix
     };
 
-    memcpy(m_uniformBuffers[currentImage].mappedData, &ubo, sizeof(ubo));
+    memcpy(m_viewProjUBOs[currentImage].mappedData, &ubo, sizeof(ubo));
 }
