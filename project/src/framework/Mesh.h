@@ -33,6 +33,7 @@ namespace dae
 	{
 		uint32_t albedoTexIndex{};
 		uint32_t normalTexIndex{};
+		uint32_t metallicRoughnessTexIndex{};
 
 		glm::vec4 baseColorFactor = {1,1,1,1};
 		float metallic = 1.f;

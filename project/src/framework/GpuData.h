@@ -19,6 +19,7 @@ namespace dae
 		alignas(16) glm::mat4 model{};
 		uint32_t albedoTexIndex{};
 		uint32_t normalTexIndex{};
+		uint32_t metallicRoughessTexIndex{};
 	};
 
 	// --- G Buffer -----------------------------------
@@ -27,12 +28,14 @@ namespace dae
 		Image depthImage{};
 		Image albedoImage{};
 		Image normalImage{};
+		Image metallicRoughnessImage{};
 
 		void Destroy(const Context& context)
 		{
 			depthImage.Destroy(context);
 			albedoImage.Destroy(context);
 			normalImage.Destroy(context);
+			metallicRoughnessImage.Destroy(context);
 		}
 	};
 

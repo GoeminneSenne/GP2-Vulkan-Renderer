@@ -2,7 +2,7 @@
 
 layout(early_fragment_tests) in;
 
-layout(constant_id = 0) const uint TEXTURE_ARRAY_SIZE = 49;
+layout(constant_id = 0) const uint TEXTURE_ARRAY_SIZE = 69;
 layout(set = 0, binding = 0) uniform sampler2D texSamplers[TEXTURE_ARRAY_SIZE];
 
 layout(location = 0) in vec3 fragColor;
@@ -12,12 +12,14 @@ layout(location = 3) in vec3 fragTangent;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec3 outNormal;
+layout(location = 2) out vec3 outMetallicRoughness;
 
 layout(push_constant) uniform constants
 {
 	mat4 model;
 	uint albedoTexIndex;
 	uint normalTexIndex;
+	uint metallicRoughnessTexIndex;
 } pushConstants;
 
 
@@ -48,4 +50,13 @@ void main()
 	sampledNormal = normalize(sampledNormal);
 
 	outNormal = sampledNormal;
+	
+	//Metallic and Roughness
+	vec4 metalRoughTex = texture(texSamplers[pushConstants.metallicRoughnessTexIndex], fragTexCoord);
+
+	float roughness = metalRoughTex.g;
+	float metallic = metalRoughTex.b;
+
+	outMetallicRoughness.g = roughness;
+	outMetallicRoughness.b = metallic;
 }

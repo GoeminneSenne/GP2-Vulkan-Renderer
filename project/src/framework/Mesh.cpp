@@ -131,7 +131,11 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 
 void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform, const std::vector<Material>& materials) const
 {
-	PushConstants modelPC{ transform, materials[materialIndex].albedoTexIndex, materials[materialIndex].normalTexIndex};
+	PushConstants modelPC{ transform,
+		materials[materialIndex].metallicRoughnessTexIndex, 
+		materials[materialIndex].normalTexIndex,
+		materials[materialIndex].metallicRoughnessTexIndex
+	};
 	vkCmdPushConstants(command.handle, pipeline.layout->handle, VK_SHADER_STAGE_VERTEX_BIT |VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(modelPC), &modelPC);
 
 	RecordDraw(command);

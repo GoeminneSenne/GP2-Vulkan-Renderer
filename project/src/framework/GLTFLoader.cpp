@@ -38,7 +38,6 @@ dae::Scene dae::GLTFLoader::LoadScene(const Context& context, const std::string&
 
 	outScene.rootNode = ProcessNode(context, scene->mRootNode, scene, outScene);
 	auto& rootTransform = outScene.nodes[outScene.rootNode].transform;
-	//rootTransform = GLTF_CONVERSION_MATRIX * rootTransform;
 
 	std::cout << "Scene has " <<  scene->mNumMeshes << " meshes" << "\n";
 	std::cout << "Scene has " <<  scene->mNumMaterials << " materials" << "\n";
@@ -160,6 +159,11 @@ uint32_t dae::GLTFLoader::ProcessMaterial(const Context& context, aiMaterial* ai
 	{
 		auto fullPath = m_sceneDirectory / texName.C_Str();
 		mat.normalTexIndex = LoadTexture(context, fullPath, aiTextureType_NORMALS, outScene);
+	}
+	if (aiMat->GetTexture(aiTextureType_GLTF_METALLIC_ROUGHNESS, 0, &texName) == AI_SUCCESS)
+	{
+		auto fullPath = m_sceneDirectory / texName.C_Str();
+		mat.metallicRoughnessTexIndex = LoadTexture(context, fullPath, aiTextureType_GLTF_METALLIC_ROUGHNESS, outScene);
 	}
 
 	outScene.materials.push_back(mat);
