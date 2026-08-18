@@ -16,6 +16,7 @@ namespace dae
 
 	inline void LoadInstanceDebugFunctions(VkInstance instance, VulkanInstanceDebugUtilsFuncTable& funcTable)
 	{
+
 		funcTable.instance = instance;
 
 		funcTable.vkCreateDebugUtilsMessengerEXT = 
