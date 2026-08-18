@@ -759,10 +759,10 @@ void dae::DeferredApplication::UpdateViewProjectionUBO(uint32_t currentImage)
 
     CameraDataUBO camData
     {
-        .invView = glm::inverse(m_camera.viewMatrix),
-        .invProj = glm::inverse(m_camera.projectionMatrix),
+        .view = m_camera.viewMatrix,
+        .proj = m_camera.projectionMatrix,
         .camPos = glm::vec4(m_camera.origin, 1),
-        .resolution = glm::vec2(m_swapchain.extent.width, m_swapchain.extent.height)
+        .resolution = glm::ivec2(m_swapchain.extent.width, m_swapchain.extent.height)
     };
 
     memcpy(m_deferredCameraDataUBOs[currentImage].mappedData, &camData, sizeof(camData));

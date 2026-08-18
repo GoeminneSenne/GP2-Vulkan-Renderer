@@ -16,10 +16,10 @@ namespace dae
 	// --- Camera Data --------------------------------
 	struct CameraDataUBO
 	{
-		alignas(16) glm::mat4 invView;
-		alignas(16) glm::mat4 invProj;
+		alignas(16) glm::mat4 view;
+		alignas(16) glm::mat4 proj;
 		alignas(16) glm::vec4 camPos;
-		alignas(8) glm::vec2 resolution;
+		alignas(8) glm::ivec2 resolution;
 		alignas(8) glm::vec2 _padding;
 	};
 
