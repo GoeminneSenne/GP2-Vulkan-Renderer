@@ -28,7 +28,6 @@ void main()
 	gl_Position = viewProj.proj * viewProj.view * pushConstants.model * vec4(inPosition, 1.0);
 	fragColor = inColor;
 	fragTexCoord = inTexCoord;
-	//fragNormal = normalize(mat3(transpose(inverse(pushConstants.model))) * inNormal);
 	fragNormal = normalize(mat3(pushConstants.model) * inNormal);
 	fragTangent = normalize(mat3(pushConstants.model) * inTangent);
 }
