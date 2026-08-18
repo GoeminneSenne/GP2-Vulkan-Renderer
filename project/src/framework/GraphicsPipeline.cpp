@@ -33,6 +33,21 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 	viewportState.viewportCount = 1;
 	viewportState.scissorCount = 1;
 
+	VkViewport dummyViewport{};
+	dummyViewport.x = 0.0f;
+	dummyViewport.y = 0.0f;
+	dummyViewport.width = 1.0f;
+	dummyViewport.height = 1.0f;
+	dummyViewport.minDepth = 0.0f;
+	dummyViewport.maxDepth = 1.0f;
+
+	VkRect2D dummyScissor{};
+	dummyScissor.offset = { 0, 0 };
+	dummyScissor.extent = { 1, 1 };
+
+	viewportState.pViewports = &dummyViewport;
+	viewportState.pScissors = &dummyScissor;
+
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
 	rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.depthClampEnable = VK_FALSE;
@@ -117,10 +132,35 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		pipelineInfo.renderPass = m_renderPass->handle;
 	}
 
+	std::cout << "Before building graphics pipeline\n";
+
+	if (!m_layout) {
+		std::cerr << "GraphicsPipelineBuilder::Build ERROR: m_layout is null\n";
+		return;
+	}
+	if (!m_useDynamicRendering && !m_renderPass) {
+		std::cerr << "GraphicsPipelineBuilder::Build ERROR: m_renderPass is null and dynamic rendering disabled\n";
+		return;
+	}
+	std::cout << "shader stage count: " << m_shaderStages.size() << '\n';
+
+	std::cout << "layout handle: " << (m_layout ? m_layout->handle : VK_NULL_HANDLE)
+		<< " renderPass: " << (m_renderPass ? m_renderPass->handle : VK_NULL_HANDLE)
+		<< " stageCount: " << pipelineInfo.stageCount
+		<< " viewportCount: " << viewportState.viewportCount
+		<< " pViewports: " << viewportState.pViewports
+		<< " scissorCount: " << viewportState.scissorCount
+		<< " pScissors: " << viewportState.pScissors
+		<< " colorAttachCount: " << colorBlending.attachmentCount
+		<< " pColorAtt: " << colorBlending.pAttachments
+		<< '\n';
+
 	LOG_VULKAN_ERROR(
 		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
 		"failed to create graphics pipeline!"
 	);
+
+	std::cout << "After building graphics pipeline\n";
 
 	pipeline.layout = m_layout;
 }
