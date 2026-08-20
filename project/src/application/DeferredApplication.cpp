@@ -14,6 +14,7 @@
 #include <framework/GLTFLoader.h>
 #include <framework/DepthHelpers.h>
 #include <framework/Utils.h>
+#include <framework/Lights.h>
 
 
 void dae::DeferredApplication::Init()
@@ -379,7 +380,6 @@ void dae::DeferredApplication::Init()
     }
 
     m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
-
 
 }
 
