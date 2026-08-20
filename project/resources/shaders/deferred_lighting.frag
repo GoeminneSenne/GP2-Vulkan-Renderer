@@ -17,9 +17,15 @@ layout(location = 0) in vec2 texCoord;
 
 layout(location = 0) out vec4 outColor;
 
+//Directional Light
 vec3 gLightDirection = -vec3(0.577, -0.577, -0.577);
 float gLightIntensity = 2.0f;
 vec3 gLightColor = vec3(1, 1, 1);
+
+//Point Light
+vec3 gLightPosition = vec3(0, 1, 0);
+vec3 gPointLightColor = vec3(0.f,0,0.332);
+float gPointLightLumen = 100.f;
 
 const float PI = 3.14159265359;
 
@@ -43,8 +49,17 @@ void main()
 
 
 	//Light data
-	const float illuminance = gLightIntensity; //Should be lux
-	const vec3 irradiance = gLightColor * illuminance;
+	//const float illuminance = gLightIntensity; //Should be lux
+	//const vec3 irradiance = gLightColor * illuminance;
+
+	//Point Light Data
+	const float lumen = gPointLightLumen;
+	const float luminousIntensity = lumen / (4.0 * PI);
+	const float DistanceToLight = length(gLightPosition - worldPosition);
+
+	const float attentuation = 1.0 / max((DistanceToLight * DistanceToLight), 0.0001f);
+	const float illuminance = luminousIntensity * attentuation;
+	const vec3 irradiance = gPointLightColor * illuminance;
 
 	//OpenGL tutorial code
 	vec3 albedo = texture(gAlbedo, texCoord).rgb;
@@ -55,7 +70,8 @@ void main()
 	vec3 Lo = vec3(0.0);
 
 	vec3 N = normal;
-	vec3 L = gLightDirection;
+	//vec3 L = gLightDirection;
+	vec3 L = normalize(gLightPosition - worldPosition);
 	vec3 V = viewVector;
 	vec3 H = normalize(V + L);
 
@@ -79,9 +95,10 @@ void main()
 	float NdotL = max(dot(N,L), 0.0);
 	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
-	vec3 ambient = vec3(0.03) * albedo;
+	vec3 ambient = vec3(0.025f) * albedo;
 	vec3 color = ambient + Lo;
 
+	color = color / (color + vec3(1.0));
 	//color = color / (color + vec3(1.0));
 	//color = pow(color, vec3(1.0/2.2));
 
@@ -97,7 +114,6 @@ vec3 GetWorldPositionFromDepth(in float depth,
 	vec2 ndc = vec2(
 		(float(fragCoords.x) / resolution.x) * 2.0f - 1.0f,
 		(float(fragCoords.y) / resolution.y) * 2.0f - 1.0f);
-	ndc.y *= -1.f;
 	const vec4 clipPos = vec4(ndc, depth, 1.0f);
 
 	//Inverse projection to view space
