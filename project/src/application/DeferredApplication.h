@@ -82,6 +82,14 @@ namespace dae
         std::vector<DescriptorSet> m_deferredCameraSets{};
         std::vector<UniformBuffer> m_viewProjUBOs;
 
+        //Blitting Pass
+        Image m_hdrBackBuffer{};
+
+        PipelineLayout m_blittingPassPipelineLayout{};
+        GraphicsPipeline m_blittingPassPipeline{};
+        DescriptorSetLayout m_blittingPassSetLayout{};
+        DescriptorSet m_blittingPassSet{};
+
         std::vector<CommandBuffer> m_renderCommandBuffers;
 
         SyncManager m_syncManager{};

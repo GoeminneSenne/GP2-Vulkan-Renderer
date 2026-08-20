@@ -87,6 +87,13 @@ void dae::DeferredApplication::Init()
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build(m_context, m_deferredCameraSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredCameraSetLayout.Destroy(m_context); });
+    
+        layoutBuilder = {};
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+            .Build(m_context, m_blittingPassSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassSetLayout.Destroy(m_context); });
+
     }
 
     // --- Shaders ----------------------------------
@@ -198,22 +205,10 @@ void dae::DeferredApplication::Init()
 
     // --- Geometry Pipeline ------------------------
     {
-
-        RenderPass pass{};
-        RenderPassBuilder builder{};
-        builder
-            .AddColorAttachment(m_gBuffer.albedoImage.format)
-            .AddColorAttachment(m_gBuffer.normalImage.format)
-            .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
-        .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-        .Build(m_context, pass);
-
-
         GraphicsPipelineBuilder pipelineBuilder = {};
         pipelineBuilder
             .SetPipelineLayout(m_geometryPipelineLayout)
             .UseDynamicRendering(true)
-			//.SetRenderPass(pass)
             .AddColorAttachment(m_gBuffer.albedoImage.format)
             .AddColorAttachment(m_gBuffer.normalImage.format)
             .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
@@ -261,7 +256,61 @@ void dae::DeferredApplication::Init()
         prepassFragmentShader.Destroy(m_context);
     }
 
+    // --- HDR Backbuffer Image
+    {
+        ImageBuilder imageBuilder{};
+        imageBuilder
+            .SetWidth(m_swapchain.extent.width)
+            .SetHeight(m_swapchain.extent.height)
+            .SetMipLevels(1)
+            .SetFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
+            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+            .Build(m_context, m_hdrBackBuffer);
+        m_resizeDeletionQueue.PushDeletor([&]() {m_hdrBackBuffer.Destroy(m_context);});
 
+    }
+
+    // --- Blitting Pass Pipeline ------------------------
+    {
+        Shader fullscreenTriangle{}, blittingPassFragment{};
+        ShaderLoader loader{};
+
+        loader
+            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
+            .Load(m_context, fullscreenTriangle);
+
+        loader
+            .SetFilename("resources/shaders/blitting_pass.frag.spv")
+            .Load(m_context, blittingPassFragment);
+
+
+        PipelineLayoutBuilder layoutBuilder = {};
+        layoutBuilder
+            .AddDescriptorSetLayout(m_blittingPassSetLayout)
+            .Build(m_context, m_blittingPassPipelineLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipelineLayout.Destroy(m_context);});
+
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_blittingPassPipelineLayout)
+            .UseDynamicRendering(true)
+            .AddColorAttachment(m_swapchain.imageFormat)
+            .SetShader(fullscreenTriangle, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(blittingPassFragment, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
+            .Build(m_context, m_blittingPassPipeline);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipeline.Destroy(m_context);});
+
+
+        fullscreenTriangle.Destroy(m_context);
+        blittingPassFragment.Destroy(m_context);
+    }
 
 	
 
@@ -312,9 +361,9 @@ void dae::DeferredApplication::Init()
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4);
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5); //GBuffer + HDR backbuffer image
 
-        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 1 + 1);
+        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 3);
         m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
     }
 
@@ -344,8 +393,6 @@ void dae::DeferredApplication::Init()
         //deferred descriptor set
         m_deferredDescriptorSet = m_descriptorPool.Allocate(m_context, m_deferredSetLayout);
 
-        auto* pTarget = &m_deferredDescriptorSet;
-
         DescriptorSetWriter deferredWriter{};
         deferredWriter
             .SetTarget(&m_deferredDescriptorSet)
@@ -365,6 +412,15 @@ void dae::DeferredApplication::Init()
                 .WriteBuffer(0, m_deferredCameraDataUBOs[i], 0, sizeof(CameraDataUBO))
                 .UpdateTarget(m_context);
         }
+
+        //HDR backbuffer image
+        m_blittingPassSet = m_descriptorPool.Allocate(m_context, m_blittingPassSetLayout);
+        
+        DescriptorSetWriter writer = {};
+        writer
+            .SetTarget(&m_blittingPassSet)
+            .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
+            .UpdateTarget(m_context);
     }
 
     // --- Sync Manager -----------------------------
@@ -557,8 +613,8 @@ void dae::DeferredApplication::HandleResize()
         .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
         .Build(m_context, m_gBuffer.metallicRoughnessImage);
 
-    DescriptorSetWriter deferredWriter{};
-    deferredWriter
+    DescriptorSetWriter writer{};
+    writer
         .SetTarget(&m_deferredDescriptorSet)
         .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
         .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
@@ -567,6 +623,28 @@ void dae::DeferredApplication::HandleResize()
         .UpdateTarget(m_context);
 
     m_resizeDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
+
+    //Recreate HDR Backbuffer Image
+    imageBuilder = {};
+    imageBuilder
+        .SetWidth(m_swapchain.extent.width)
+        .SetHeight(m_swapchain.extent.height)
+        .SetMipLevels(1)
+        .SetFormat(VK_FORMAT_R32G32B32A32_SFLOAT)
+        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
+        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
+        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
+        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+        .Build(m_context, m_hdrBackBuffer);
+    m_resizeDeletionQueue.PushDeletor([&]() {m_hdrBackBuffer.Destroy(m_context);});
+
+
+    writer = {};
+    writer
+        .SetTarget(&m_blittingPassSet)
+        .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
+        .UpdateTarget(m_context);
+
 
     //Recreate RenderFinishedSemaphores
     m_syncManager.RecreateRenderFinishedSemaphores(m_context, static_cast<uint32_t>(m_swapchain.images.size()));
