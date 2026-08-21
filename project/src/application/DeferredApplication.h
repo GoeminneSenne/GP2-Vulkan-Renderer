@@ -31,10 +31,7 @@
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
 
-const std::string TEXTURE_PATH = "resources/viking_room/viking_room.png";
-
 const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
-
 const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 namespace dae

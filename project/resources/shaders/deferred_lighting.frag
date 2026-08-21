@@ -24,8 +24,8 @@ vec3 gLightColor = vec3(1, 1, 1);
 
 //Point Light
 vec3 gLightPosition = vec3(0, 1, 0);
-vec3 gPointLightColor = vec3(0.f,0,0.332);
-float gPointLightLumen = 100.f;
+vec3 gPointLightColor = vec3(0.732f,0.5,0.f);
+float gPointLightLumen = 400.f;
 
 const float PI = 3.14159265359;
 
@@ -96,6 +96,7 @@ void main()
 	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
 	vec3 ambient = vec3(0.025f) * albedo;
+	ambient = vec3(0);
 	vec3 color = ambient + Lo;
 
 	color = color / (color + vec3(1.0)); //Should be moved to HDR segment

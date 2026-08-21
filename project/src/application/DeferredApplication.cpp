@@ -155,45 +155,6 @@ void dae::DeferredApplication::Init()
         m_resizeDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
     }
 
-    // --- Deferred Graphics Pipeline ---------------
-    {
-        PipelineLayoutBuilder layoutBuilder = {};
-        layoutBuilder
-            .AddDescriptorSetLayout(m_deferredSetLayout)
-            .AddDescriptorSetLayout(m_deferredCameraSetLayout)
-            .Build(m_context, m_deferredPipelineLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
-
-        Shader deferredVertexShader, deferredFragmentShader;
-        ShaderLoader loader = {};
-        loader
-            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
-            .Load(m_context, deferredVertexShader);
-        loader
-            .SetFilename("resources/shaders/deferred_lighting.frag.spv")
-            .Load(m_context, deferredFragmentShader);
-
-
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_deferredPipelineLayout)
-            .UseDynamicRendering(true)
-            .AddColorAttachment(m_swapchain.imageFormat)
-            .SetShader(deferredVertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(deferredFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
-            .Build(m_context, m_deferredPipeline);
-
-
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipeline.Destroy(m_context); });
-        deferredVertexShader.Destroy(m_context);
-        deferredFragmentShader.Destroy(m_context);
-    }
-
     PipelineLayoutBuilder pipelineLayoutBuilder = {};
     pipelineLayoutBuilder
         .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -203,31 +164,6 @@ void dae::DeferredApplication::Init()
 
     m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipelineLayout.Destroy(m_context); });
 
-    // --- Geometry Pipeline ------------------------
-    {
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_geometryPipelineLayout)
-            .UseDynamicRendering(true)
-            .AddColorAttachment(m_gBuffer.albedoImage.format)
-            .AddColorAttachment(m_gBuffer.normalImage.format)
-            .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
-            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
-            .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
-            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-            .Build(m_context, m_geometryPipeline);
-
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipeline.Destroy(m_context); });
-
-
-    }
 
     // --- Depth Prepass Pipeline ------------------------
     {
@@ -256,6 +192,33 @@ void dae::DeferredApplication::Init()
         prepassFragmentShader.Destroy(m_context);
     }
 
+    // --- Geometry Pipeline ------------------------
+    {
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_geometryPipelineLayout)
+            .UseDynamicRendering(true)
+            .AddColorAttachment(m_gBuffer.albedoImage.format)
+            .AddColorAttachment(m_gBuffer.normalImage.format)
+            .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
+            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
+            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
+            .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
+            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
+            .Build(m_context, m_geometryPipeline);
+
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipeline.Destroy(m_context); });
+
+
+    }
+
+
     // --- HDR Backbuffer Image
     {
         ImageBuilder imageBuilder{};
@@ -271,6 +234,45 @@ void dae::DeferredApplication::Init()
             .Build(m_context, m_hdrBackBuffer);
         m_resizeDeletionQueue.PushDeletor([&]() {m_hdrBackBuffer.Destroy(m_context);});
 
+    }
+
+    // --- Deferred Graphics Pipeline ---------------
+    {
+        PipelineLayoutBuilder layoutBuilder = {};
+        layoutBuilder
+            .AddDescriptorSetLayout(m_deferredSetLayout)
+            .AddDescriptorSetLayout(m_deferredCameraSetLayout)
+            .Build(m_context, m_deferredPipelineLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
+
+        Shader deferredVertexShader, deferredFragmentShader;
+        ShaderLoader loader = {};
+        loader
+            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
+            .Load(m_context, deferredVertexShader);
+        loader
+            .SetFilename("resources/shaders/deferred_lighting.frag.spv")
+            .Load(m_context, deferredFragmentShader);
+
+
+        GraphicsPipelineBuilder pipelineBuilder = {};
+        pipelineBuilder
+            .SetPipelineLayout(m_deferredPipelineLayout)
+            .UseDynamicRendering(true)
+            .AddColorAttachment(m_hdrBackBuffer.format)
+            .SetShader(deferredVertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+            .SetShader(deferredFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+            .SetPolygonMode(VK_POLYGON_MODE_FILL)
+            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
+            .Build(m_context, m_deferredPipeline);
+
+
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipeline.Destroy(m_context); });
+        deferredVertexShader.Destroy(m_context);
+        deferredFragmentShader.Destroy(m_context);
     }
 
     // --- Blitting Pass Pipeline ------------------------
@@ -311,6 +313,7 @@ void dae::DeferredApplication::Init()
         fullscreenTriangle.Destroy(m_context);
         blittingPassFragment.Destroy(m_context);
     }
+
 
 	
 
@@ -682,6 +685,10 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.metallicRoughnessImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+    
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
     //Dynamic States
     VkViewport viewport{};
@@ -820,8 +827,8 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
 
     VkRenderingAttachmentInfo deferredColorAttachment{};
     deferredColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    deferredColorAttachment.imageView = swapchainImage.view;
-    deferredColorAttachment.imageLayout = swapchainImage.layout;
+    deferredColorAttachment.imageView = m_hdrBackBuffer.view;
+    deferredColorAttachment.imageLayout = m_hdrBackBuffer.layout;
     deferredColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     deferredColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     deferredColorAttachment.clearValue = deferredClearValue;
@@ -841,6 +848,37 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_deferredDescriptorSet.set, 0, nullptr);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_deferredCameraSets[currentFrame].set, 0, nullptr);
+    vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
+    vkCmdEndRendering(commandBuffer.handle);
+
+    //Transition HDR Backbuffer image to Shader Read Only
+    ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+
+    //Blitting Pass Rendering
+    VkRenderingAttachmentInfo blittingColorAttachment{};
+    blittingColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    blittingColorAttachment.imageView = swapchainImage.view;
+    blittingColorAttachment.imageLayout = swapchainImage.layout;
+    blittingColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    blittingColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    blittingColorAttachment.clearValue = colorClearValue;
+
+    VkRenderingInfo blittingRenderInfo{};
+    blittingRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    blittingRenderInfo.renderArea = VkRect2D{ VkOffset2D{0, 0}, m_swapchain.extent };
+    blittingRenderInfo.layerCount = 1;
+    blittingRenderInfo.colorAttachmentCount = 1;
+    blittingRenderInfo.pColorAttachments = &blittingColorAttachment;
+
+    vkCmdBeginRendering(commandBuffer.handle, &blittingRenderInfo);
+
+    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipeline.handle);
+    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipelineLayout.handle,
+        0, 1, &m_blittingPassSet.set, 0, nullptr);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
 
