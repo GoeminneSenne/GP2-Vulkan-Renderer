@@ -57,6 +57,6 @@ namespace dae
 		//Dynamic Rendering
 		bool m_useDynamicRendering{ false };
 		std::vector<VkFormat> m_colorAttachments{};
-		VkFormat m_depthFormat{};
+		VkFormat m_depthFormat{VK_FORMAT_UNDEFINED};
 	};
 }

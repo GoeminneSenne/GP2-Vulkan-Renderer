@@ -17,7 +17,7 @@
 constexpr static int MAX_FRAMES_IN_FLIGHT = 3;
 
 #ifdef NDEBUG
-constexpr static bool ENABLE_VALIDATION = false;
+constexpr static bool ENABLE_VALIDATION = true;
 #else
 constexpr static bool ENABLE_VALIDATION = true;
 #endif

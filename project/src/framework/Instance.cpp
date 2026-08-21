@@ -39,7 +39,7 @@ void dae::InstanceBuilder::Build(Instance& instance)
 
 	if (m_useValidation)
 	{
-		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 		PopulateDebugMessengerCreateInfo(debugCreateInfo);
 
 		createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());

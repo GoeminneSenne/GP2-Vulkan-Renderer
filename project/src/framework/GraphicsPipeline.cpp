@@ -116,9 +116,10 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 	pipelineInfo.basePipelineIndex = -1;
 	pipelineInfo.pDepthStencilState = &depthStencil;
 
+	VkPipelineRenderingCreateInfo renderingInfo{};
+
 	if (m_useDynamicRendering)
 	{
-		VkPipelineRenderingCreateInfo renderingInfo{};
 		renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
 		renderingInfo.colorAttachmentCount = static_cast<uint32_t>(m_colorAttachments.size());
 		renderingInfo.pColorAttachmentFormats = m_colorAttachments.data();
