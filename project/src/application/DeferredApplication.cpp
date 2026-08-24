@@ -43,10 +43,11 @@ void dae::DeferredApplication::Init()
         m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
         m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
-        m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 30.f, glm::vec3{ 0.f, 0.5f, 1.f });
-        m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 80.f, glm::vec3{ 0.9f, 0.f, 0.f });
+        m_scene.AddPointLight(glm::vec3{ -10.f, 0.5f, 0.f }, 300, glm::vec3(0.7f, 0.2f, 0.1f));
+        //m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 30.f, glm::vec3{ 0.f, 0.5f, 1.f });
+        //m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 80.f, glm::vec3{ 0.9f, 0.f, 0.f });
 
-        m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 1, glm::vec3(1, 1, 1));
+        //m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 1, glm::vec3(1, 1, 1));
     }
     // --- Light Buffers -------------------------------
     {
@@ -82,16 +83,21 @@ void dae::DeferredApplication::Init()
             VMA_MEMORY_USAGE_AUTO, 0);
         m_applicationDeletionQueue.PushDeletor([&]() {m_dirLightsBuffer.Destroy(m_context);});
 
-        Buffer staging{};
-        BufferHelpers::CreateStaging(m_context, staging, dirLightsSize);
+        if (!m_scene.directionalLights.empty())
+        {
 
-        BufferHelpers::UploadData(m_context, staging, m_scene.directionalLights.data(), dirLightsSize);
+            Buffer staging{};
+            BufferHelpers::CreateStaging(m_context, staging, dirLightsSize);
 
-        CommandBuffer cmd = m_context.commandPool.BeginSingleTimeCommand();
-        BufferHelpers::CopyBuffer(cmd, staging, m_dirLightsBuffer, dirLightsSize);
-        m_context.commandPool.EndSingleTimeCommand(cmd);
+            BufferHelpers::UploadData(m_context, staging, m_scene.directionalLights.data(), dirLightsSize);
 
-        staging.Destroy(m_context);
+            CommandBuffer cmd = m_context.commandPool.BeginSingleTimeCommand();
+            BufferHelpers::CopyBuffer(cmd, staging, m_dirLightsBuffer, dirLightsSize);
+            m_context.commandPool.EndSingleTimeCommand(cmd);
+
+            staging.Destroy(m_context);
+        }
+
     }
 
     // --- Swapchain ----------------------------------

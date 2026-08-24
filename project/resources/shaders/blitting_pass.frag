@@ -6,11 +6,55 @@ layout(set = 0, binding = 0) uniform sampler2D hdrImage;
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 
+float CalculateEV100FromPhysicalCamera(in float aperture, in float shutterTime, in float ISO);
+float ConvertEV100ToExposure(in float EV100);
+vec3 ReinhardToneMapping(in vec3 color);
+
+#define SUNNY_16;
+//#define INDOOR
+
 void main()
 {
+	float aperture;
+	float ISO;
+	float shutterSpeed;
+
+	#ifdef SUNNY_16
+		aperture = 5.f;
+		ISO = 100.f;
+		shutterSpeed = 1.f / 200.f;
+	#endif
+
+	#ifdef INDOOR
+		aperture = 1.4f;
+		ISO = 1600.f;
+		shutterSpeed = 1.f / 60.f;
+	#endif
+
 	vec3 hdrColor = texture(hdrImage, uv).rgb;
 
-	vec3 ldrColor = hdrColor / (hdrColor + vec3(1.0));
+	const float EV100_HardCoded = 1.f;
+	const float EV100_PhysicalCamera = 
+		CalculateEV100FromPhysicalCamera(aperture, shutterSpeed, ISO);
+
+	float exposure = ConvertEV100ToExposure(-4);
+	vec3 ldrColor = ReinhardToneMapping(hdrColor * exposure);
+	
 	outColor = vec4(ldrColor, 1.0f);
 }
 
+float CalculateEV100FromPhysicalCamera(in float aperture, in float shutterTime, in float ISO)
+{
+	return log2(pow(aperture, 2) / shutterTime * 100 / ISO);
+}
+
+float ConvertEV100ToExposure(in float EV100)
+{
+	const float maxLuminance = 1.2f * pow(2.f, EV100);
+	return 1.f / max(maxLuminance, 0.0001f);
+}
+
+vec3 ReinhardToneMapping(in vec3 color)
+{
+	return color / (color + vec3(1.f));
+}
