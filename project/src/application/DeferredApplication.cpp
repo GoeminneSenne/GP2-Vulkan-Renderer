@@ -43,7 +43,28 @@ void dae::DeferredApplication::Init()
         m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
         m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
-        m_textureImage = m_scene.textures[0];
+        m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 320.f, glm::vec3{ 0.f, 0.5f, 1.f });
+        m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 820.f, glm::vec3{ 0.9f, 0.f, 0.f });
+
+    }
+    // --- Light Buffer -------------------------------
+    {
+        VkDeviceSize bufferSize{ sizeof(PointLight) * m_scene.pointLights.size() };
+        BufferHelpers::CreateBuffer(m_context, m_pointLightsBuffer, bufferSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VMA_MEMORY_USAGE_AUTO, 0);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_pointLightsBuffer.Destroy(m_context);});
+
+        Buffer staging{};
+        BufferHelpers::CreateStaging(m_context, staging, bufferSize);
+
+        BufferHelpers::UploadData(m_context, staging, m_scene.pointLights.data(), bufferSize);
+        
+        CommandBuffer cmd = m_context.commandPool.BeginSingleTimeCommand();
+        BufferHelpers::CopyBuffer(cmd, staging, m_pointLightsBuffer, bufferSize);
+        m_context.commandPool.EndSingleTimeCommand(cmd);
+
+        staging.Destroy(m_context);
     }
 
     // --- Swapchain ----------------------------------
@@ -250,6 +271,8 @@ void dae::DeferredApplication::Init()
         layoutBuilder
             .AddDescriptorSetLayout(m_deferredSetLayout)
             .AddDescriptorSetLayout(m_deferredCameraSetLayout)
+            .AddDescriptorSetLayout(m_deferredPointLightsSetLayout)
+            .AddPushConstant(0, sizeof(LightsPC), VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build(m_context, m_deferredPipelineLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
 
@@ -433,6 +456,16 @@ void dae::DeferredApplication::Init()
             .SetTarget(&m_blittingPassSet)
             .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
             .UpdateTarget(m_context);
+    
+        //Point Lights set
+        m_deferredPointLightsSet = m_descriptorPool.Allocate(m_context, m_deferredPointLightsSetLayout);
+        writer = {};
+        writer
+            .SetTarget(&m_deferredPointLightsSet)
+            .WriteBuffer(0, m_pointLightsBuffer, 0, VK_WHOLE_SIZE)
+            .UpdateTarget(m_context);
+
+        writer = {};
     }
 
     // --- Sync Manager -----------------------------
@@ -851,12 +884,16 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     
     vkCmdBeginRendering(commandBuffer.handle, &deferredRenderInfo);
 
+    LightsPC pc{ m_scene.pointLights.size(), m_scene.directionalLights.size() };
+
     //Bind data
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_deferredDescriptorSet.set, 0, nullptr);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_deferredCameraSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 2, 1, &m_deferredPointLightsSet.set, 0, nullptr);
+    vkCmdPushConstants(commandBuffer.handle, m_deferredPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightsPC), &pc);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
 

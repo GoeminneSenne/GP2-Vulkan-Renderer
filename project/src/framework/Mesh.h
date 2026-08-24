@@ -5,6 +5,7 @@
 #include "Buffer.h"
 #include "Image.h"
 #include "Vertex.h"
+#include "Lights.h"
 
 namespace dae
 {
@@ -55,10 +56,18 @@ namespace dae
 		std::vector<Image> textures;
 		std::vector<Node> nodes;
 
+		std::vector<PointLight> pointLights;
+		std::vector<DirectionalLight> directionalLights;
+
 		uint32_t rootNode = 0;
 
 		void RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline) const;
 		void DrawNode(const CommandBuffer& command, const Node& node, const GraphicsPipeline& pipeline, const glm::mat4& parentTransform, const std::vector<Material>& materials) const;
+
+		void AddPointLight(const PointLight& pointLight);
+		void AddPointLight(const glm::vec3& position, float lumens, const glm::vec3& color);
+		void AddDirectionalLight(const DirectionalLight& dirLight);
+		void AddDirectionalLight(const glm::vec3& direction, float lux, const glm::vec3& color);
 
 		void Destroy(const Context& context);
 	};

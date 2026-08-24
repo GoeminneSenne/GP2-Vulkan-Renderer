@@ -3,7 +3,15 @@
 struct PointLight
 {
 	vec3 position;
-	float lumens;
+	float lumen;
+	vec3 color;
+	float _padding;
+};
+
+struct DirectionalLight
+{
+	vec3 direction;
+	float lux;
 	vec3 color;
 	float _padding;
 };
@@ -29,7 +37,8 @@ layout(set = 2, binding = 0) readonly buffer PointLights
 layout(push_constant) uniform PC
 {
 	uint pointLightCount;
-} lightCounts;
+	uint dirLightCount;
+} pc;
 
 
 layout(location = 0) in vec2 texCoord;
@@ -41,10 +50,6 @@ vec3 gLightDirection = -vec3(0.577, -0.577, -0.577);
 float gLightIntensity = 2.0f;
 vec3 gLightColor = vec3(1, 1, 1);
 
-//Point Light
-vec3 gLightPosition = vec3(0, 1, 0);
-vec3 gPointLightColor = vec3(0.732f,0.5,0.f);
-float gPointLightLumen = 400.f;
 
 const float PI = 3.14159265359;
 
@@ -67,18 +72,20 @@ void main()
 	const vec3 viewVector = normalize(camData.camPos.xyz - worldPosition);
 
 
-	//Light data
+	//Directional Light data
 	//const float illuminance = gLightIntensity; //Should be lux
 	//const vec3 irradiance = gLightColor * illuminance;
 
 	//Point Light Data
-	const float lumen = gPointLightLumen;
+	PointLight light = pointLights.lights[1];
+
+	const float lumen = light.lumen;
 	const float luminousIntensity = lumen / (4.0 * PI);
-	const float DistanceToLight = length(gLightPosition - worldPosition);
+	const float DistanceToLight = length(light.position - worldPosition);
 
 	const float attentuation = 1.0 / max((DistanceToLight * DistanceToLight), 0.0001f);
 	const float illuminance = luminousIntensity * attentuation;
-	const vec3 irradiance = gPointLightColor * illuminance;
+	const vec3 irradiance = light.color * illuminance;
 
 	//OpenGL tutorial code
 	vec3 albedo = texture(gAlbedo, texCoord).rgb;
@@ -90,7 +97,7 @@ void main()
 
 	vec3 N = normal;
 	//vec3 L = gLightDirection;
-	vec3 L = normalize(gLightPosition - worldPosition);
+	vec3 L = normalize(light.position - worldPosition);
 	vec3 V = viewVector;
 	vec3 H = normalize(V + L);
 

@@ -32,6 +32,12 @@ namespace dae
 		uint32_t metallicRoughessTexIndex{};
 	};
 
+	struct LightsPC
+	{
+		uint32_t pointLightCount{};
+		uint32_t dirLightCount{};
+	};
+
 	// --- G Buffer -----------------------------------
 	struct GBuffer
 	{

@@ -101,7 +101,6 @@ namespace dae
 
         std::vector<UniformBuffer> m_deferredCameraDataUBOs;
 
-        Image m_textureImage{};
         Sampler m_sampler{};
 
         GBuffer m_gBuffer{};

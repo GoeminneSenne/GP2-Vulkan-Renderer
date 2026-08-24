@@ -163,6 +163,26 @@ void dae::Scene::DrawNode(const CommandBuffer& command, const Node& node, const 
 	}
 }
 
+void dae::Scene::AddPointLight(const PointLight& pointLight)
+{
+	pointLights.push_back(pointLight);
+}
+
+void dae::Scene::AddPointLight(const glm::vec3& position, float lumens, const glm::vec3& color)
+{
+	AddPointLight(PointLight{ position, lumens, color });
+}
+
+void dae::Scene::AddDirectionalLight(const DirectionalLight& dirLight)
+{
+	directionalLights.push_back(dirLight);
+}
+
+void dae::Scene::AddDirectionalLight(const glm::vec3& direction, float lux, const glm::vec3& color)
+{
+	AddDirectionalLight(DirectionalLight{ direction, lux, color });
+}
+
 void dae::Scene::Destroy(const Context& context)
 {
 	for (auto& mesh : meshes)
