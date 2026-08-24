@@ -357,6 +357,7 @@ void dae::DeferredApplication::Init()
         PipelineLayoutBuilder layoutBuilder = {};
         layoutBuilder
             .AddDescriptorSetLayout(m_blittingPassSetLayout)
+            .AddPushConstant(0, sizeof(ExposurePC), VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build(m_context, m_blittingPassPipelineLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipelineLayout.Destroy(m_context);});
 
@@ -958,11 +959,14 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
 
     vkCmdBeginRendering(commandBuffer.handle, &blittingRenderInfo);
 
+    ExposurePC exposurePC{ m_camera.aperture, m_camera.ISO, m_camera.shutterSpeed };
+
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipelineLayout.handle,
         0, 1, &m_blittingPassSet.set, 0, nullptr);
+    vkCmdPushConstants(commandBuffer.handle, m_blittingPassPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ExposurePC), &exposurePC);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
 

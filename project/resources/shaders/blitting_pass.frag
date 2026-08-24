@@ -3,6 +3,13 @@
 
 layout(set = 0, binding = 0) uniform sampler2D hdrImage;
 
+layout(push_constant) uniform PhysicalCamera
+{
+	float aperture;
+	float ISO;
+	float shutterSpeed;
+} physicalCamera;
+
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 
@@ -10,14 +17,14 @@ float CalculateEV100FromPhysicalCamera(in float aperture, in float shutterTime, 
 float ConvertEV100ToExposure(in float EV100);
 vec3 ReinhardToneMapping(in vec3 color);
 
-#define SUNNY_16;
+//#define SUNNY_16;
 //#define INDOOR
 
 void main()
 {
-	float aperture;
-	float ISO;
-	float shutterSpeed;
+	float aperture = physicalCamera.aperture;
+	float ISO = physicalCamera.ISO;
+	float shutterSpeed = physicalCamera.shutterSpeed;
 
 	#ifdef SUNNY_16
 		aperture = 5.f;
@@ -37,7 +44,7 @@ void main()
 	const float EV100_PhysicalCamera = 
 		CalculateEV100FromPhysicalCamera(aperture, shutterSpeed, ISO);
 
-	float exposure = ConvertEV100ToExposure(-4);
+	float exposure = ConvertEV100ToExposure(EV100_PhysicalCamera);
 	vec3 ldrColor = ReinhardToneMapping(hdrColor * exposure);
 	
 	outColor = vec4(ldrColor, 1.0f);

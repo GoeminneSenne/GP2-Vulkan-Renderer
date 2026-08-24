@@ -18,6 +18,10 @@ namespace dae
 			fovAngle{_fovAngle}
 		{}
 
+		float aperture{1.4f};
+		float ISO{1600.f};
+		float shutterSpeed{ 1.f / 60.f };
+
 		glm::vec3 origin{};
 		float fovAngle{ 90.f };
 		float fov{ glm::tan((glm::radians(fovAngle) / 2.f)) };

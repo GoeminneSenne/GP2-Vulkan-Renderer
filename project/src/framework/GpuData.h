@@ -38,6 +38,13 @@ namespace dae
 		uint32_t dirLightCount{};
 	};
 
+	struct ExposurePC
+	{
+		float aperture{};
+		float ISO{};
+		float shutterSpeed{};
+	};
+
 	// --- G Buffer -----------------------------------
 	struct GBuffer
 	{
