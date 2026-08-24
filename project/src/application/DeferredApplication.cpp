@@ -88,6 +88,14 @@ void dae::DeferredApplication::Init()
             .Build(m_context, m_deferredCameraSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredCameraSetLayout.Destroy(m_context); });
     
+        //Deferred Lights set
+        layoutBuilder = {};
+        layoutBuilder
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .Build(m_context, m_deferredPointLightsSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPointLightsSetLayout.Destroy(m_context); });
+
+        //Blitting Pass Descriptor Set
         layoutBuilder = {};
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
@@ -365,8 +373,9 @@ void dae::DeferredApplication::Init()
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
         poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5); //GBuffer + HDR backbuffer image
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2);
 
-        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 3);
+        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 4);
         m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
     }
 

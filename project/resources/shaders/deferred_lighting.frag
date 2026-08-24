@@ -1,5 +1,13 @@
 #version 450
 
+struct PointLight
+{
+	vec3 position;
+	float lumens;
+	vec3 color;
+	float _padding;
+};
+
 layout(binding = 0) uniform sampler2D gAlbedo;
 layout(binding = 1) uniform sampler2D gDepth;
 layout(binding = 2) uniform sampler2D gNormal;
@@ -12,6 +20,17 @@ layout(set = 1, binding = 0) uniform CamData
 	vec4 camPos;
 	ivec2 resolution;
 } camData;
+
+layout(set = 2, binding = 0) readonly buffer PointLights
+{
+	PointLight[] lights;
+} pointLights;
+
+layout(push_constant) uniform PC
+{
+	uint pointLightCount;
+} lightCounts;
+
 
 layout(location = 0) in vec2 texCoord;
 

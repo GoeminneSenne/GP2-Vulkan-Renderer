@@ -79,6 +79,10 @@ namespace dae
         std::vector<DescriptorSet> m_deferredCameraSets{};
         std::vector<UniformBuffer> m_viewProjUBOs;
 
+        DescriptorSetLayout m_deferredPointLightsSetLayout{};
+        DescriptorSet m_deferredPointLightsSet{};
+        Buffer m_pointLightsBuffer{};
+
         //Blitting Pass
         Image m_hdrBackBuffer{};
 
