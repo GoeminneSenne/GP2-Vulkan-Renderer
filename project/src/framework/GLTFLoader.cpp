@@ -138,7 +138,7 @@ uint32_t dae::GLTFLoader::ProcessMesh(const Context& context, aiMesh* aiMesh, co
 	}
 
 	// --- Mesh construction ------------------------
-	mesh.materialIndex = aiMesh->mMaterialIndex;
+	mesh.SetMaterialIndex(aiMesh->mMaterialIndex);
 
 	mesh.Upload(context, vertices, indices);
 	outScene.meshes.push_back(mesh);

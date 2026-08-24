@@ -74,22 +74,22 @@ void dae::Mesh::LoadObj(const Context& context, const std::string& path)
 void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertices,
 	const std::vector<uint32_t>& indices)
 {
-	vertexCount = static_cast<uint32_t>(vertices.size());
-	indexCount = static_cast<uint32_t>(indices.size());
+	m_vertexCount = static_cast<uint32_t>(vertices.size());
+	m_indexCount = static_cast<uint32_t>(indices.size());
 
 	// --- Vertex Buffer --------------------------
 	{
-		VkDeviceSize verticesSize = sizeof(vertices[0]) * vertexCount;
+		VkDeviceSize verticesSize = sizeof(vertices[0]) * m_vertexCount;
 
 
 		Buffer staging;
 		BufferHelpers::CreateStaging(context, staging, verticesSize);
 		BufferHelpers::UploadData(context, staging, vertices.data(), verticesSize);
 
-		BufferHelpers::CreateVertex(context, vertexBuffer, verticesSize);
+		BufferHelpers::CreateVertex(context, m_vertexBuffer, verticesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
-		BufferHelpers::CopyBuffer(command, staging, vertexBuffer, verticesSize);
+		BufferHelpers::CopyBuffer(command, staging, m_vertexBuffer, verticesSize);
 		context.commandPool.EndSingleTimeCommand(command);
 
 		staging.Destroy(context);
@@ -97,16 +97,16 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 
 	// --- Index Buffer --------------------------
 	{
-		VkDeviceSize indicesSize = sizeof(indices[0]) * indexCount;
+		VkDeviceSize indicesSize = sizeof(indices[0]) * m_indexCount;
 
 		Buffer staging;
 		BufferHelpers::CreateStaging(context, staging, indicesSize);
 		BufferHelpers::UploadData(context, staging, indices.data(), indicesSize);
 
-		BufferHelpers::CreateIndex(context, indexBuffer, indicesSize);
+		BufferHelpers::CreateIndex(context, m_indexBuffer, indicesSize);
 
 		CommandBuffer command = context.commandPool.BeginSingleTimeCommand();
-		BufferHelpers::CopyBuffer(command, staging, indexBuffer, indicesSize);
+		BufferHelpers::CopyBuffer(command, staging, m_indexBuffer, indicesSize);
 		context.commandPool.EndSingleTimeCommand(command);
 
 		staging.Destroy(context);
@@ -115,8 +115,8 @@ void dae::Mesh::Upload(const Context& context, const std::vector<Vertex>& vertic
 
 void dae::Mesh::Destroy(const Context& context)
 {
-	vertexBuffer.Destroy(context);
-	indexBuffer.Destroy(context);
+	m_vertexBuffer.Destroy(context);
+	m_indexBuffer.Destroy(context);
 }
 
 
@@ -124,21 +124,26 @@ void dae::Mesh::RecordDraw(const CommandBuffer& command) const
 {
 	VkDeviceSize offset = 0;
 
-	vkCmdBindVertexBuffers(command.handle, 0, 1, &vertexBuffer.handle, &offset);
-	vkCmdBindIndexBuffer(command.handle, indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-	vkCmdDrawIndexed(command.handle, indexCount, 1, 0, 0, 0);
+	vkCmdBindVertexBuffers(command.handle, 0, 1, &m_vertexBuffer.handle, &offset);
+	vkCmdBindIndexBuffer(command.handle, m_indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(command.handle, m_indexCount, 1, 0, 0, 0);
 }
 
 void dae::Mesh::RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform, const std::vector<Material>& materials) const
 {
 	PushConstants modelPC{ transform,
-		materials[materialIndex].albedoTexIndex, 
-		materials[materialIndex].normalTexIndex,
-		materials[materialIndex].metallicRoughnessTexIndex
+		materials[m_materialIndex].albedoTexIndex, 
+		materials[m_materialIndex].normalTexIndex,
+		materials[m_materialIndex].metallicRoughnessTexIndex
 	};
 	vkCmdPushConstants(command.handle, pipeline.layout->handle, VK_SHADER_STAGE_VERTEX_BIT |VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(modelPC), &modelPC);
 
 	RecordDraw(command);
+}
+
+void dae::Mesh::SetMaterialIndex(uint32_t materialIndex)
+{
+	m_materialIndex = materialIndex;
 }
 
 

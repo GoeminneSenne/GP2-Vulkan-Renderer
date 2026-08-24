@@ -13,8 +13,9 @@ namespace dae
 	struct Context;
 	struct Material;
 
-	struct Mesh final
+	class Mesh final
 	{
+	public:
 		void LoadObj(const Context& context, const std::string& path);
 		void Upload(const Context& context, const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
 		void Destroy(const Context& context);
@@ -22,12 +23,15 @@ namespace dae
 		void RecordDraw(const CommandBuffer& command) const;
 		void RecordDraw(const CommandBuffer& command, const GraphicsPipeline& pipeline, const glm::mat4& transform, const std::vector<Material>& materials) const;
 
-		Buffer vertexBuffer{};
-		Buffer indexBuffer{};
-		uint32_t vertexCount = 0;
-		uint32_t indexCount = 0;
+		void SetMaterialIndex(uint32_t materialIndex);
 
-		uint32_t materialIndex = 0;
+	private:
+		Buffer m_vertexBuffer{};
+		Buffer m_indexBuffer{};
+		uint32_t m_vertexCount = 0;
+		uint32_t m_indexCount = 0;
+
+		uint32_t m_materialIndex = 0;
 	};
 
 	struct Material
