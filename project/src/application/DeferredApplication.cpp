@@ -43,25 +43,52 @@ void dae::DeferredApplication::Init()
         m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
         m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
-        m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 320.f, glm::vec3{ 0.f, 0.5f, 1.f });
-        m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 820.f, glm::vec3{ 0.9f, 0.f, 0.f });
+        m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 30.f, glm::vec3{ 0.f, 0.5f, 1.f });
+        m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 80.f, glm::vec3{ 0.9f, 0.f, 0.f });
 
+        m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 1, glm::vec3(1, 1, 1));
     }
-    // --- Light Buffer -------------------------------
+    // --- Light Buffers -------------------------------
     {
-        VkDeviceSize bufferSize{ sizeof(PointLight) * m_scene.pointLights.size() };
-        BufferHelpers::CreateBuffer(m_context, m_pointLightsBuffer, bufferSize,
+        VkDeviceSize pointLightsSize = m_scene.pointLights.empty()
+            ? sizeof(PointLight)
+            : sizeof(PointLight) * m_scene.pointLights.size();
+        BufferHelpers::CreateBuffer(m_context, m_pointLightsBuffer, pointLightsSize,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
             VMA_MEMORY_USAGE_AUTO, 0);
         m_applicationDeletionQueue.PushDeletor([&]() {m_pointLightsBuffer.Destroy(m_context);});
 
-        Buffer staging{};
-        BufferHelpers::CreateStaging(m_context, staging, bufferSize);
+        if (!m_scene.pointLights.empty())
+        {
+            Buffer staging{};
+            BufferHelpers::CreateStaging(m_context, staging, pointLightsSize);
 
-        BufferHelpers::UploadData(m_context, staging, m_scene.pointLights.data(), bufferSize);
-        
+            BufferHelpers::UploadData(m_context, staging, m_scene.pointLights.data(), pointLightsSize);
+
+            CommandBuffer cmd = m_context.commandPool.BeginSingleTimeCommand();
+            BufferHelpers::CopyBuffer(cmd, staging, m_pointLightsBuffer, pointLightsSize);
+            m_context.commandPool.EndSingleTimeCommand(cmd);
+
+            staging.Destroy(m_context);
+        }
+
+
+        //Directional Lights
+        VkDeviceSize dirLightsSize = m_scene.directionalLights.empty()
+            ? sizeof(DirectionalLight)
+            : sizeof(DirectionalLight) * m_scene.directionalLights.size();
+        BufferHelpers::CreateBuffer(m_context, m_dirLightsBuffer, dirLightsSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VMA_MEMORY_USAGE_AUTO, 0);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_dirLightsBuffer.Destroy(m_context);});
+
+        Buffer staging{};
+        BufferHelpers::CreateStaging(m_context, staging, dirLightsSize);
+
+        BufferHelpers::UploadData(m_context, staging, m_scene.directionalLights.data(), dirLightsSize);
+
         CommandBuffer cmd = m_context.commandPool.BeginSingleTimeCommand();
-        BufferHelpers::CopyBuffer(cmd, staging, m_pointLightsBuffer, bufferSize);
+        BufferHelpers::CopyBuffer(cmd, staging, m_dirLightsBuffer, dirLightsSize);
         m_context.commandPool.EndSingleTimeCommand(cmd);
 
         staging.Destroy(m_context);
@@ -113,6 +140,7 @@ void dae::DeferredApplication::Init()
         layoutBuilder = {};
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build(m_context, m_deferredPointLightsSetLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPointLightsSetLayout.Destroy(m_context); });
 
@@ -466,6 +494,10 @@ void dae::DeferredApplication::Init()
             .UpdateTarget(m_context);
 
         writer = {};
+        writer
+            .SetTarget(&m_deferredPointLightsSet)
+            .WriteBuffer(1, m_dirLightsBuffer, 0, VK_WHOLE_SIZE)
+            .UpdateTarget(m_context);
     }
 
     // --- Sync Manager -----------------------------

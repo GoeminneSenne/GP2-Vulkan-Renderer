@@ -33,6 +33,10 @@ layout(set = 2, binding = 0) readonly buffer PointLights
 {
 	PointLight[] lights;
 } pointLights;
+layout(set = 2, binding = 1) readonly buffer DirectionalLights
+{
+	DirectionalLight[] lights;
+} dirLights;
 
 layout(push_constant) uniform PC
 {
@@ -44,12 +48,6 @@ layout(push_constant) uniform PC
 layout(location = 0) in vec2 texCoord;
 
 layout(location = 0) out vec4 outColor;
-
-//Directional Light
-vec3 gLightDirection = -vec3(0.577, -0.577, -0.577);
-float gLightIntensity = 2.0f;
-vec3 gLightColor = vec3(1, 1, 1);
-
 
 const float PI = 3.14159265359;
 
@@ -69,64 +67,82 @@ void main()
 		texelCoord, camData.resolution,
 		inverse(camData.proj), inverse(camData.view));
 
-	const vec3 viewVector = normalize(camData.camPos.xyz - worldPosition);
-
-
-	//Directional Light data
-	//const float illuminance = gLightIntensity; //Should be lux
-	//const vec3 irradiance = gLightColor * illuminance;
-
-	//Point Light Data
-	PointLight light = pointLights.lights[1];
-
-	const float lumen = light.lumen;
-	const float luminousIntensity = lumen / (4.0 * PI);
-	const float DistanceToLight = length(light.position - worldPosition);
-
-	const float attentuation = 1.0 / max((DistanceToLight * DistanceToLight), 0.0001f);
-	const float illuminance = luminousIntensity * attentuation;
-	const vec3 irradiance = light.color * illuminance;
-
-	//OpenGL tutorial code
 	vec3 albedo = texture(gAlbedo, texCoord).rgb;
-	vec3 normal = normalize(texture(gNormal, texCoord).rgb);
 	float metallic = texture(gMetallicRougness, texCoord).b;
 	float roughness = texture(gMetallicRougness, texCoord).g;
-
-	vec3 Lo = vec3(0.0);
-
-	vec3 N = normal;
-	//vec3 L = gLightDirection;
-	vec3 L = normalize(light.position - worldPosition);
-	vec3 V = viewVector;
-	vec3 H = normalize(V + L);
-
-	vec3 radiance = irradiance;
+	
+	vec3 N = normalize(texture(gNormal, texCoord).rgb);
+	vec3 V = normalize(camData.camPos.xyz - worldPosition);
 
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
-	vec3 F = fresnelSchlick(max(dot(H,V), 0.0), F0);
 
-	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
+	vec3 Lo = vec3(0.0);
 
-	vec3 kS = F;
-	vec3 kD = vec3(1.0) - kS;
-	kD *= 1.0 - metallic;
+	//Point Light loop
+	for(int i = 0; i < pc.pointLightCount; ++i)
+	{
+		PointLight light = pointLights.lights[i];
 
-	vec3 numerator = NDF * G * F;
-	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N,L), 0.0) + 0.0001;
-	vec3 specular = numerator / denominator;
+		const float lumen = light.lumen;
+		const float luminousIntensity = lumen / (4.0 * PI);
+		const float DistanceToLight = length(light.position - worldPosition);
 
-	float NdotL = max(dot(N,L), 0.0);
-	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+		const float attentuation = 1.0 / max((DistanceToLight * DistanceToLight), 0.0001f);
+		const float illuminance = luminousIntensity * attentuation;
+		const vec3 irradiance = light.color * illuminance;
+	
+		//vec3 L = gLightDirection;
+		vec3 L = normalize(light.position - worldPosition);
+		vec3 H = normalize(V + L);
+	
+		float NDF = DistributionGGX(N, H, roughness);
+		float G = GeometrySmith(N, V, L, roughness);
+		vec3 F = fresnelSchlick(max(dot(H,V), 0.0), F0);
+	
+		vec3 kS = F;
+		vec3 kD = vec3(1.0) - kS;
+		kD *= 1.0 - metallic;
+
+		vec3 numerator = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N,L), 0.0) + 0.0001;
+		vec3 specular = numerator / denominator;
+
+		float NdotL = max(dot(N,L), 0.0);
+		Lo += (kD * albedo / PI + specular) * irradiance * NdotL;
+	}
+
+	//Directional Light Loop
+	for(int i = 0; i < pc.dirLightCount; ++i)
+	{
+		DirectionalLight light = dirLights.lights[i];
+		
+		const float illuminance = light.lux;
+		const vec3 irradiance = light.color * illuminance;
+	
+		vec3 L = -light.direction;
+		vec3 H = normalize(V + L);
+	
+		float NDF = DistributionGGX(N, H, roughness);
+		float G = GeometrySmith(N, V, L, roughness);
+		vec3 F = fresnelSchlick(max(dot(H,V), 0.0), F0);
+	
+		vec3 kS = F;
+		vec3 kD = vec3(1.0) - kS;
+		kD *= 1.0 - metallic;
+
+		vec3 numerator = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N,L), 0.0) + 0.0001;
+		vec3 specular = numerator / denominator;
+
+		float NdotL = max(dot(N,L), 0.0);
+		Lo += (kD * albedo / PI + specular) * irradiance * NdotL;
+	}
+
 
 	vec3 ambient = vec3(0.025f) * albedo;
 	ambient = vec3(0);
 	vec3 color = ambient + Lo;
-
-	color = color / (color + vec3(1.0)); //Should be moved to HDR segment
-
 
 	outColor = vec4(color, 1.0);
 }

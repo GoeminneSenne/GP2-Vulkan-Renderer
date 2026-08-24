@@ -82,6 +82,7 @@ namespace dae
         DescriptorSetLayout m_deferredPointLightsSetLayout{};
         DescriptorSet m_deferredPointLightsSet{};
         Buffer m_pointLightsBuffer{};
+        Buffer m_dirLightsBuffer{};
 
         //Blitting Pass
         Image m_hdrBackBuffer{};
