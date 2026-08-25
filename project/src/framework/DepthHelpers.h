@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Context.h"
+#include "ImageHelpers.h"
 
 namespace dae::DepthHelpers
 {

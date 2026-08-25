@@ -27,6 +27,7 @@
 #include <framework/SwapchainSupportDetails.h>
 #include <framework/GLTFLoader.h>
 #include <framework/GpuData.h>
+#include <framework/GBuffer.h>
 
 constexpr static uint32_t WIDTH = 800;
 constexpr static uint32_t HEIGHT = 600;
@@ -102,8 +103,8 @@ namespace dae
 
         PipelineLayout m_blittingPassPipelineLayout{};
         GraphicsPipeline m_blittingPassPipeline{};
-        DescriptorSetLayout m_blittingPassSetLayout{};
-        DescriptorSet m_blittingPassSet{};
+        DescriptorSetLayout m_hdrImageSetLayout{};
+        DescriptorSet m_hdrImageSet{};
 
 
     };

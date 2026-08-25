@@ -1,8 +1,5 @@
 #include "DeferredApplication.h"
 
-#include <array>
-#include <chrono>
-
 #include <framework/DescriptorSet.h>
 #include <framework/Sampler.h>
 #include <framework/Shader.h>
@@ -181,189 +178,16 @@ void dae::DeferredApplication::Init()
     }
 
     //----------------------------------------------
-    // Geometry Pipeline + Depth Prepass Pipeline
+    // G Buffer
     //----------------------------------------------
     {
-
-    }
-
-    // --- DescriptorSetLayouts ----------------------
-    {
-
-    DescriptorSetLayoutBuilder layoutBuilder{};
-
-        //Frame data set
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-            .Build(m_context, m_viewProjSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_viewProjSetLayout.Destroy(m_context); });
-
-        //Global data set
-        layoutBuilder = {};
-        layoutBuilder
-            //Ideally this is split so you don't link the sampler for every image
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
-            .Build(m_context, m_texturesSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_texturesSetLayout.Destroy(m_context); });
-    
-        //Deferred Pipeline set
-        layoutBuilder = {};
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-			.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-			.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .Build(m_context, m_gBufferSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_gBufferSetLayout.Destroy(m_context); });
-    
-        //Deferrd Camera Data sets
-        layoutBuilder = {};
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_camDataSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_camDataSetLayout.Destroy(m_context); });
-    
-        //Deferred Lights set
-        layoutBuilder = {};
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_lightsSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_lightsSetLayout.Destroy(m_context); });
-
-        //Blitting Pass Descriptor Set
-        layoutBuilder = {};
-        layoutBuilder
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .Build(m_context, m_blittingPassSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassSetLayout.Destroy(m_context); });
-
-    }
-
-    // --- Shaders ----------------------------------
-    Shader vertexShader, fragmentShader;
-    {
-        ShaderLoader shaderLoader = {};
-        shaderLoader
-            .SetFilename("resources/shaders/geometry.vert.spv")
-            .Load(m_context, vertexShader);
-
-        shaderLoader
-            .SetFilename("resources/shaders/geometry.frag.spv")
-            .Load(m_context, fragmentShader);
-    }
-    // --- GBuffer Resources --------------------------
-    {
-        //Albedo Image
-        ImageBuilder imageBuilder{};
-        imageBuilder
-            .SetWidth(m_swapchain.extent.width)
-            .SetHeight(m_swapchain.extent.height)
-            .SetMipLevels(1)
-            .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
-            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-            .Build(m_context, m_gBuffer.albedoImage);
-
-        //Normal Image
-        imageBuilder = {};
-        imageBuilder
-            .SetWidth(m_swapchain.extent.width)
-            .SetHeight(m_swapchain.extent.height)
-            .SetMipLevels(1)
-            .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-            .Build(m_context, m_gBuffer.normalImage);
-
-        //Depth Image
-        DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
-
-        // Metallic & Roughness Image
-        imageBuilder = {};
-        imageBuilder
-            .SetWidth(m_swapchain.extent.width)
-            .SetHeight(m_swapchain.extent.height)
-            .SetMipLevels(1)
-            .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
-            .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-            .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-            .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-            .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-            .Build(m_context, m_gBuffer.metallicRoughnessImage);
-
+        m_gBuffer.Create(m_context, m_swapchain);
         m_resizeDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
     }
 
-    PipelineLayoutBuilder pipelineLayoutBuilder = {};
-    pipelineLayoutBuilder
-        .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
-        .AddDescriptorSetLayout(m_texturesSetLayout)
-        .AddDescriptorSetLayout(m_viewProjSetLayout)
-        .Build(m_context, m_geometryPipelineLayout);
-
-    m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipelineLayout.Destroy(m_context); });
-
-
-    // --- Depth Prepass Pipeline ------------------------
-    {
-        Shader prepassFragmentShader{};
-        ShaderLoader loader{};
-        loader
-            .SetFilename("resources/shaders/prepass.frag.spv")
-            .Load(m_context, prepassFragmentShader);
-
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_geometryPipelineLayout)
-            .UseDynamicRendering(true)
-            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(prepassFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
-            .AddVertexInputBindingDescription((Vertex::GetBindingDescription()))
-            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-            .Build(m_context, m_prepassPipeline);
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_prepassPipeline.Destroy(m_context); });
-        prepassFragmentShader.Destroy(m_context);
-    }
-
-    // --- Geometry Pipeline ------------------------
-    {
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_geometryPipelineLayout)
-            .UseDynamicRendering(true)
-            .AddColorAttachment(m_gBuffer.albedoImage.format)
-            .AddColorAttachment(m_gBuffer.normalImage.format)
-            .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
-            .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
-            .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
-            .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
-            .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
-            .Build(m_context, m_geometryPipeline);
-
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipeline.Destroy(m_context); });
-
-
-    }
-
-
-    // --- HDR Backbuffer Image
+    //----------------------------------------------
+    // HDR Backbuffer Image
+    //----------------------------------------------
     {
         ImageBuilder imageBuilder{};
         imageBuilder
@@ -376,202 +200,360 @@ void dae::DeferredApplication::Init()
             .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
             .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
             .Build(m_context, m_hdrBackBuffer);
+
         m_resizeDeletionQueue.PushDeletor([&]() {m_hdrBackBuffer.Destroy(m_context);});
-
     }
 
-    // --- Deferred Graphics Pipeline ---------------
+    //----------------------------------------------
+    // Geometry Pipeline + Depth Prepass Pipeline
+    //----------------------------------------------
     {
-        PipelineLayoutBuilder layoutBuilder = {};
-        layoutBuilder
-            .AddDescriptorSetLayout(m_gBufferSetLayout)
-            .AddDescriptorSetLayout(m_camDataSetLayout)
-            .AddDescriptorSetLayout(m_lightsSetLayout)
-            .AddPushConstant(0, sizeof(LightsPC), VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_deferredPipelineLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
-
-        Shader deferredVertexShader, deferredFragmentShader;
-        ShaderLoader loader = {};
-        loader
-            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
-            .Load(m_context, deferredVertexShader);
-        loader
-            .SetFilename("resources/shaders/deferred_lighting.frag.spv")
-            .Load(m_context, deferredFragmentShader);
-
-
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_deferredPipelineLayout)
-            .UseDynamicRendering(true)
-            .AddColorAttachment(m_hdrBackBuffer.format)
-            .SetShader(deferredVertexShader, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(deferredFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
-            .Build(m_context, m_deferredPipeline);
-
-
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipeline.Destroy(m_context); });
-        deferredVertexShader.Destroy(m_context);
-        deferredFragmentShader.Destroy(m_context);
-    }
-
-    // --- Blitting Pass Pipeline ------------------------
-    {
-        Shader fullscreenTriangle{}, blittingPassFragment{};
-        ShaderLoader loader{};
-
-        loader
-            .SetFilename("resources/shaders/deferred_lighting.vert.spv")
-            .Load(m_context, fullscreenTriangle);
-
-        loader
-            .SetFilename("resources/shaders/blitting_pass.frag.spv")
-            .Load(m_context, blittingPassFragment);
-
-
-        PipelineLayoutBuilder layoutBuilder = {};
-        layoutBuilder
-            .AddDescriptorSetLayout(m_blittingPassSetLayout)
-            .AddPushConstant(0, sizeof(ExposurePC), VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_blittingPassPipelineLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipelineLayout.Destroy(m_context);});
-
-        GraphicsPipelineBuilder pipelineBuilder = {};
-        pipelineBuilder
-            .SetPipelineLayout(m_blittingPassPipelineLayout)
-            .UseDynamicRendering(true)
-            .AddColorAttachment(m_swapchain.imageFormat)
-            .SetShader(fullscreenTriangle, VK_SHADER_STAGE_VERTEX_BIT)
-            .SetShader(blittingPassFragment, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
-            .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
-            .SetPolygonMode(VK_POLYGON_MODE_FILL)
-            .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
-            .Build(m_context, m_blittingPassPipeline);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipeline.Destroy(m_context);});
-
-
-        fullscreenTriangle.Destroy(m_context);
-        blittingPassFragment.Destroy(m_context);
-    }
-
-
-	
-
-    fragmentShader.Destroy(m_context);
-    vertexShader.Destroy(m_context);
-
-
-
-
-    // --- Uniform Buffers --------------------------
-    {
-        m_viewProjUBOs.resize(MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        // --- Textures Descriptor Set Layout ----------------------
         {
-            VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
-            BufferHelpers::CreateUniform(m_context, m_viewProjUBOs[i], bufferSize);
-            m_applicationDeletionQueue.PushDeletor([&, i]() {m_viewProjUBOs[i].Destroy(m_context); });
+            DescriptorSetLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
+                .Build(m_context, m_texturesSetLayout);
+            
+            m_applicationDeletionQueue.PushDeletor([&]() {m_texturesSetLayout.Destroy(m_context);});
         }
 
-        m_camDataUBOs.resize(MAX_FRAMES_IN_FLIGHT);
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        // --- View Proj Descriptor Set Layout ----------------------
         {
-            VkDeviceSize bufferSize = sizeof(CameraDataUBO);
-            BufferHelpers::CreateUniform(m_context, m_camDataUBOs[i], bufferSize);
-            m_applicationDeletionQueue.PushDeletor([&, i]() {m_camDataUBOs[i].Destroy(m_context);});
+            DescriptorSetLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+                .Build(m_context, m_viewProjSetLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_viewProjSetLayout.Destroy(m_context); });
+        }
+
+        // --- Shaders ----------------------
+        Shader vertexShader, geometryFragmentShader, prepassFragmentShader;
+        {
+            ShaderLoader loader{};
+            loader
+                .SetFilename("resources/shaders/geometry.vert.spv")
+                .Load(m_context, vertexShader);
+
+            loader
+                .SetFilename("resources/shaders/geometry.frag.spv")
+                .Load(m_context, geometryFragmentShader);
+
+            loader
+                .SetFilename("resources/shaders/prepass.frag.spv")
+                .Load(m_context, prepassFragmentShader);    
+        }
+
+        // --- Pipeline Layout ----------------------
+        {
+            PipelineLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+                .AddDescriptorSetLayout(m_texturesSetLayout)
+                .AddDescriptorSetLayout(m_viewProjSetLayout)
+                .Build(m_context, m_geometryPipelineLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipelineLayout.Destroy(m_context); });
+        }
+
+        // --- Depth Prepass Pipeline ----------------------
+        {
+            GraphicsPipelineBuilder pipelineBuilder{};
+            pipelineBuilder
+                .SetPipelineLayout(m_geometryPipelineLayout)
+                .UseDynamicRendering(true)
+                .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context)) //TODO change to gBuffer
+                .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+                .SetShader(prepassFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+                .SetPolygonMode(VK_POLYGON_MODE_FILL)
+                .SetDepthTest(true, true, VK_COMPARE_OP_LESS)
+                .AddVertexInputBindingDescription((Vertex::GetBindingDescription()))
+                .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
+                .Build(m_context, m_prepassPipeline);
+                
+            m_applicationDeletionQueue.PushDeletor([&]() {m_prepassPipeline.Destroy(m_context); });
+        }
+
+        // --- Geometry Pipeline ----------------------
+        {
+            GraphicsPipelineBuilder pipelineBuilder{};
+            pipelineBuilder
+                .SetPipelineLayout(m_geometryPipelineLayout)
+                .UseDynamicRendering(true)
+                .AddColorAttachment(m_gBuffer.albedoImage.format)
+                .AddColorAttachment(m_gBuffer.normalImage.format)
+                .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
+                .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
+                .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+                .SetShader(geometryFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .SetCullMode(VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+                .SetPolygonMode(VK_POLYGON_MODE_FILL)
+                .SetDepthTest(true, false, VK_COMPARE_OP_LESS_OR_EQUAL)
+                .AddVertexInputBindingDescription(Vertex::GetBindingDescription())
+                .AddVertexInputAttributeDescriptions(Vertex::GetAttributeDescriptions())
+                .Build(m_context, m_geometryPipeline);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipeline.Destroy(m_context); });
+        }
+
+        vertexShader.Destroy(m_context);
+        geometryFragmentShader.Destroy(m_context);
+        prepassFragmentShader.Destroy(m_context);
+
+        // --- View Proj UBOs ----------------------
+        {
+            m_viewProjUBOs.resize(MAX_FRAMES_IN_FLIGHT);
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+            {
+                VkDeviceSize bufferSize = sizeof(ViewProjectionUBO);
+                BufferHelpers::CreateUniform(m_context, m_viewProjUBOs[i], bufferSize);
+                m_applicationDeletionQueue.PushDeletor([&, i]() {m_viewProjUBOs[i].Destroy(m_context); });
+            }
+        }
+
+        // --- Descriptor Sets & Writes --------------------------
+        {
+            //Textures descriptor set
+            m_texturesSet = m_descriptorPool.Allocate(m_context, m_texturesSetLayout);
+
+            DescriptorSetWriter textureWriter{};
+            textureWriter
+                .SetTarget(&m_texturesSet)
+                .WriteImageArray(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_scene.textures, m_sampler)
+                .UpdateTarget(m_context);
+
+            //View Proj descriptor sets
+            m_viewProjSets = m_descriptorPool.Allocate(m_context, m_viewProjSetLayout, MAX_FRAMES_IN_FLIGHT);
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+            {
+                DescriptorSetWriter writer = {};
+                writer
+                    .SetTarget(&m_viewProjSets[i])
+                    .WriteBuffer(0, m_viewProjUBOs[i], 0, sizeof(ViewProjectionUBO))
+                    .UpdateTarget(m_context);
+            }
         }
     }
 
-
-    // --- Descriptor Sets --------------------------
+    //----------------------------------------------
+    // Deferred Pipeline
+    //----------------------------------------------
     {
-        //global descriptor set
-        m_texturesSet = m_descriptorPool.Allocate(m_context, m_texturesSetLayout);
-
-        DescriptorSetWriter globalWriter{};
-        globalWriter
-            .SetTarget(&m_texturesSet)
-            .WriteImageArray(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_scene.textures, m_sampler)
-            .UpdateTarget(m_context);
-
-        //frame descriptor set
-        m_viewProjSets = m_descriptorPool.Allocate(m_context, m_viewProjSetLayout, MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+        // --- G Buffer Descriptor Set Layout ----------------------
         {
-            DescriptorSetWriter writer = {};
+            DescriptorSetLayoutBuilder layoutBuilder = {};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .Build(m_context, m_gBufferSetLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_gBufferSetLayout.Destroy(m_context); });
+        }
+
+        // --- Camera Data Descriptor Set Layout ----------------------
+        {
+            DescriptorSetLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build(m_context, m_camDataSetLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_camDataSetLayout.Destroy(m_context); });
+        }
+
+        // --- Lights Descriptor Set Layout ----------------------
+        {
+            DescriptorSetLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build(m_context, m_lightsSetLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_lightsSetLayout.Destroy(m_context); });
+        }
+
+        // --- Deferred Pipeline Layout ----------------------
+        {
+            PipelineLayoutBuilder layoutBuilder{};
+            layoutBuilder
+                .AddDescriptorSetLayout(m_gBufferSetLayout)
+                .AddDescriptorSetLayout(m_camDataSetLayout)
+                .AddDescriptorSetLayout(m_lightsSetLayout)
+                .AddPushConstant(0, sizeof(LightsPC), VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build(m_context, m_deferredPipelineLayout);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
+        }
+
+        // --- Shaders ----------------------
+        Shader vertexShader, fragmentShader;
+        {
+            ShaderLoader loader{};
+            loader
+                .SetFilename("resources/shaders/deferred_lighting.vert.spv")
+                .Load(m_context, vertexShader);
+
+            loader
+                .SetFilename("resources/shaders/deferred_lighting.frag.spv")
+                .Load(m_context, fragmentShader);
+        }
+
+        // --- Deferred Pipeline ----------------------
+        {
+            GraphicsPipelineBuilder pipelineBuilder = {};
+            pipelineBuilder
+                .SetPipelineLayout(m_deferredPipelineLayout)
+                .UseDynamicRendering(true)
+                .AddColorAttachment(m_hdrBackBuffer.format)
+                .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+                .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+                .SetPolygonMode(VK_POLYGON_MODE_FILL)
+                .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
+                .Build(m_context, m_deferredPipeline);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipeline.Destroy(m_context); });
+        }
+
+        vertexShader.Destroy(m_context);
+        fragmentShader.Destroy(m_context);
+
+        // --- Camera Data UBOs ----------------------
+        {
+            m_camDataUBOs.resize(MAX_FRAMES_IN_FLIGHT);
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+            {
+                VkDeviceSize bufferSize = sizeof(CameraDataUBO);
+                BufferHelpers::CreateUniform(m_context, m_camDataUBOs[i], bufferSize);
+                m_applicationDeletionQueue.PushDeletor([&, i]() {m_camDataUBOs[i].Destroy(m_context);});
+            }
+        }
+
+        // --- Descriptor Sets & Writes --------------------------
+        {
+            //G Buffer descriptor set
+            m_gBufferSet = m_descriptorPool.Allocate(m_context, m_gBufferSetLayout);
+
+            DescriptorSetWriter writer{};
             writer
-                .SetTarget(&m_viewProjSets[i])
-                .WriteBuffer(0, m_viewProjUBOs[i], 0, sizeof(ViewProjectionUBO))
+                .SetTarget(&m_gBufferSet)
+                .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
+                .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
+                .WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
+                .WriteImage(3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.metallicRoughnessImage, m_sampler)
+                .UpdateTarget(m_context);
+
+            //Camera Data Descriptor Sets
+            m_camDataSets = m_descriptorPool.Allocate(m_context, m_camDataSetLayout, MAX_FRAMES_IN_FLIGHT);
+
+            for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+            {
+                writer = {};
+                writer
+                    .SetTarget(&m_camDataSets[i])
+                    .WriteBuffer(0, m_camDataUBOs[i], 0, sizeof(CameraDataUBO))
+                    .UpdateTarget(m_context);
+            }
+
+
+            //Point Lights set
+            m_lightsSet = m_descriptorPool.Allocate(m_context, m_lightsSetLayout);
+            writer = {};
+            writer
+                .SetTarget(&m_lightsSet)
+                .WriteBuffer(0, m_pointLightsBuffer, 0, VK_WHOLE_SIZE)
+                .UpdateTarget(m_context);
+
+            //Directional Lights set
+            writer = {};
+            writer
+                .SetTarget(&m_lightsSet)
+                .WriteBuffer(1, m_dirLightsBuffer, 0, VK_WHOLE_SIZE)
                 .UpdateTarget(m_context);
         }
+    }
 
-        //deferred descriptor set
-        m_gBufferSet = m_descriptorPool.Allocate(m_context, m_gBufferSetLayout);
-
-        DescriptorSetWriter deferredWriter{};
-        deferredWriter
-            .SetTarget(&m_gBufferSet)
-            .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
-			.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
-			.WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
-            .WriteImage(3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.metallicRoughnessImage, m_sampler)
-            .UpdateTarget(m_context);
-
-        m_camDataSets = m_descriptorPool.Allocate(m_context, m_camDataSetLayout, MAX_FRAMES_IN_FLIGHT);
-
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+    //----------------------------------------------
+    // Blitting Pipeline
+    //----------------------------------------------
+    {
+        // --- HDR Image Descriptor Set Layout ----------------------
         {
-            DescriptorSetWriter writer = {};
-            writer
-                .SetTarget(&m_camDataSets[i])
-                .WriteBuffer(0, m_camDataUBOs[i], 0, sizeof(CameraDataUBO))
-                .UpdateTarget(m_context);
+            DescriptorSetLayoutBuilder layoutBuilder = {};
+            layoutBuilder
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
+                .Build(m_context, m_hdrImageSetLayout);
+            m_applicationDeletionQueue.PushDeletor([&]() {m_hdrImageSetLayout.Destroy(m_context); });
+
         }
 
-        //HDR backbuffer image
-        m_blittingPassSet = m_descriptorPool.Allocate(m_context, m_blittingPassSetLayout);
-        
-        DescriptorSetWriter writer = {};
-        writer
-            .SetTarget(&m_blittingPassSet)
-            .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
-            .UpdateTarget(m_context);
-    
-        //Point Lights set
-        m_lightsSet = m_descriptorPool.Allocate(m_context, m_lightsSetLayout);
-        writer = {};
-        writer
-            .SetTarget(&m_lightsSet)
-            .WriteBuffer(0, m_pointLightsBuffer, 0, VK_WHOLE_SIZE)
-            .UpdateTarget(m_context);
+        // --- Blitting Pipeline Layout ----------------------
+        {
+            PipelineLayoutBuilder layoutBuilder = {};
+            layoutBuilder
+                .AddDescriptorSetLayout(m_hdrImageSetLayout)
+                .AddPushConstant(0, sizeof(ExposurePC), VK_SHADER_STAGE_FRAGMENT_BIT)
+                .Build(m_context, m_blittingPassPipelineLayout);
 
-        writer = {};
-        writer
-            .SetTarget(&m_lightsSet)
-            .WriteBuffer(1, m_dirLightsBuffer, 0, VK_WHOLE_SIZE)
-            .UpdateTarget(m_context);
+            m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipelineLayout.Destroy(m_context);});
+        }
+
+        // --- Shaders ----------------------
+        Shader vertexShader, fragmentShader;
+        {
+            ShaderLoader loader{};
+
+            loader
+                .SetFilename("resources/shaders/deferred_lighting.vert.spv")
+                .Load(m_context, vertexShader);
+
+            loader
+                .SetFilename("resources/shaders/blitting_pass.frag.spv")
+                .Load(m_context, fragmentShader);
+        }
+
+        // --- Blitting Pipeline ----------------------
+        {
+
+            GraphicsPipelineBuilder pipelineBuilder = {};
+            pipelineBuilder
+                .SetPipelineLayout(m_blittingPassPipelineLayout)
+                .UseDynamicRendering(true)
+                .AddColorAttachment(m_swapchain.imageFormat)
+                .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
+                .SetShader(fragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
+                .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+                .SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE)
+                .SetPolygonMode(VK_POLYGON_MODE_FILL)
+                .SetDepthTest(false, false, VK_COMPARE_OP_ALWAYS)
+                .Build(m_context, m_blittingPassPipeline);
+
+            m_applicationDeletionQueue.PushDeletor([&]() {m_blittingPassPipeline.Destroy(m_context);});
+        }
+
+        vertexShader.Destroy(m_context);
+        fragmentShader.Destroy(m_context);
+
+        // --- Descriptor Sets & Writes --------------------------
+        {
+            m_hdrImageSet = m_descriptorPool.Allocate(m_context, m_hdrImageSetLayout);
+
+            DescriptorSetWriter writer = {};
+            writer
+                .SetTarget(&m_hdrImageSet)
+                .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
+                .UpdateTarget(m_context);
+        }
     }
-
-    // --- Sync Manager -----------------------------
-    {
-
-    }
-
-    // --- Camera -----------------------------
-    {
-
-    }
-
-
 }
 
 bool dae::DeferredApplication::ShouldClose() const
@@ -706,47 +688,8 @@ void dae::DeferredApplication::HandleResize()
     m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context);});
 
     //Recreate depth image
-    //TODO cleanup this code
-    DepthHelpers::CreateDepthImage(m_context, m_swapchain, m_gBuffer.depthImage);
-
-    ImageBuilder imageBuilder{};
-    imageBuilder
-        .SetWidth(m_swapchain.extent.width)
-        .SetHeight(m_swapchain.extent.height)
-        .SetMipLevels(1)
-        .SetFormat(VK_FORMAT_R8G8B8A8_UNORM) //TODO: check format 
-        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-        .Build(m_context, m_gBuffer.albedoImage);
-
-    //Normal Image
-    imageBuilder = {};
-    imageBuilder
-        .SetWidth(m_swapchain.extent.width)
-        .SetHeight(m_swapchain.extent.height)
-        .SetMipLevels(1)
-        .SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
-        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-        .Build(m_context, m_gBuffer.normalImage);
-
-
-    // Metallic & Roughness Image
-    imageBuilder = {};
-    imageBuilder
-        .SetWidth(m_swapchain.extent.width)
-        .SetHeight(m_swapchain.extent.height)
-        .SetMipLevels(1)
-        .SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
-        .SetTiling(VK_IMAGE_TILING_OPTIMAL)
-        .SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
-        .SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)
-        .SetAllocUsage(VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
-        .Build(m_context, m_gBuffer.metallicRoughnessImage);
+    m_gBuffer.Create(m_context, m_swapchain);
+    m_resizeDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
 
     DescriptorSetWriter writer{};
     writer
@@ -757,10 +700,8 @@ void dae::DeferredApplication::HandleResize()
         .WriteImage(3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.metallicRoughnessImage, m_sampler)
         .UpdateTarget(m_context);
 
-    m_resizeDeletionQueue.PushDeletor([&]() {m_gBuffer.Destroy(m_context);});
-
     //Recreate HDR Backbuffer Image
-    imageBuilder = {};
+    ImageBuilder imageBuilder = {};
     imageBuilder
         .SetWidth(m_swapchain.extent.width)
         .SetHeight(m_swapchain.extent.height)
@@ -773,10 +714,9 @@ void dae::DeferredApplication::HandleResize()
         .Build(m_context, m_hdrBackBuffer);
     m_resizeDeletionQueue.PushDeletor([&]() {m_hdrBackBuffer.Destroy(m_context);});
 
-
     writer = {};
     writer
-        .SetTarget(&m_blittingPassSet)
+        .SetTarget(&m_hdrImageSet)
         .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_hdrBackBuffer, m_sampler)
         .UpdateTarget(m_context);
 
@@ -1016,7 +956,7 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
     vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipelineLayout.handle,
-        0, 1, &m_blittingPassSet.set, 0, nullptr);
+        0, 1, &m_hdrImageSet.set, 0, nullptr);
     vkCmdPushConstants(commandBuffer.handle, m_blittingPassPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ExposurePC), &exposurePC);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);

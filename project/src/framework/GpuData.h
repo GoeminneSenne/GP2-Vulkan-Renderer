@@ -1,8 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include "Image.h"
-#include "Context.h"
+
 
 namespace dae
 {
@@ -44,22 +43,4 @@ namespace dae
 		float ISO{};
 		float shutterSpeed{};
 	};
-
-	// --- G Buffer -----------------------------------
-	struct GBuffer
-	{
-		Image depthImage{};
-		Image albedoImage{};
-		Image normalImage{};
-		Image metallicRoughnessImage{};
-
-		void Destroy(const Context& context)
-		{
-			depthImage.Destroy(context);
-			albedoImage.Destroy(context);
-			normalImage.Destroy(context);
-			metallicRoughnessImage.Destroy(context);
-		}
-	};
-
 }
