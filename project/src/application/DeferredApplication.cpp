@@ -737,32 +737,45 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     VkClearValue colorClearValue{ .color = {0.f, 0.f, 0.f, 1.f} };
     VkClearValue depthClearValue{ .depthStencil = {1.f, 0} };
 
-    //Insert image memory barriers
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+    //----------------------------------------------
+    // Initial Image Barriers
+    //----------------------------------------------
+    {
+        // Depth Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
 
-    ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+        //Swapchain Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+        // G Buffer Albedo Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+        // G Buffer Normal Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.metallicRoughnessImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
-    
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+        //G Buffer Metallic Roughness Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.metallicRoughnessImage, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
 
-    //Dynamic States
+        //HDR Backbuffer Image
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_NONE, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_NONE, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT);
+    }
+
+
+    //----------------------------------------------
+    // Dynamic States
+    //----------------------------------------------
     VkViewport viewport{};
     viewport.x = 0.f;
     viewport.y = 0.f;
@@ -777,194 +790,215 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
 
     uint32_t currentFrame = m_syncManager.GetCurrentFrameIndex();
 
-    //Depth Prepass
-    VkRenderingAttachmentInfo prepassAttachment{};
-    prepassAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    prepassAttachment.imageView = m_gBuffer.depthImage.view;
-    prepassAttachment.imageLayout = m_gBuffer.depthImage.layout;
-    prepassAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    prepassAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    prepassAttachment.clearValue = depthClearValue;
+    //----------------------------------------------
+    // Depth Prepass
+    //----------------------------------------------
+    {
+        // --- Depth Attachment --------------------------
+        VkRenderingAttachmentInfo prepassAttachment{};
+        prepassAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        prepassAttachment.imageView = m_gBuffer.depthImage.view;
+        prepassAttachment.imageLayout = m_gBuffer.depthImage.layout;
+        prepassAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        prepassAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        prepassAttachment.clearValue = depthClearValue;
 
-    VkRenderingInfo prepassRenderInfo{};
-    prepassRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    prepassRenderInfo.renderArea = scissor;
-    prepassRenderInfo.layerCount = 1;
-    prepassRenderInfo.colorAttachmentCount = 0;
-    prepassRenderInfo.pColorAttachments = nullptr;
-    prepassRenderInfo.pDepthAttachment = &prepassAttachment;
-    prepassRenderInfo.pStencilAttachment = nullptr;
+        // --- Rendering Info --------------------------
+        VkRenderingInfo prepassRenderInfo{};
+        prepassRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        prepassRenderInfo.renderArea = scissor;
+        prepassRenderInfo.layerCount = 1;
+        prepassRenderInfo.colorAttachmentCount = 0;
+        prepassRenderInfo.pColorAttachments = nullptr;
+        prepassRenderInfo.pDepthAttachment = &prepassAttachment;
+        prepassRenderInfo.pStencilAttachment = nullptr;
 
-    vkCmdBeginRendering(commandBuffer.handle, &prepassRenderInfo);
-    
-    //Bind prepass pipeline & states
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_prepassPipeline.handle);
-    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
+        //--- Set Up Pipeline State --------------------------
+        vkCmdBeginRendering(commandBuffer.handle, &prepassRenderInfo);
+        vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_prepassPipeline.handle);
+        vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+        vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
 
-    //Render scene
-    m_scene.RecordDraw(commandBuffer, m_prepassPipeline);
-     
+        //Render scene
+        m_scene.RecordDraw(commandBuffer, m_prepassPipeline);
 
-    vkCmdEndRendering(commandBuffer.handle);
+        vkCmdEndRendering(commandBuffer.handle);
 
-    //Insert barrier so prepass is done writing before the main rendering starts
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
+        //Insert barrier so prepass is done writing before the main rendering starts
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT);
+    }
 
-    //-----------------------------------------------------------
-    //Set attachments for Geometry Pipeline
-    //Albedo Image
-    VkRenderingAttachmentInfo colorAttachment{};
-    colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    colorAttachment.imageView = m_gBuffer.albedoImage.view;
-    colorAttachment.imageLayout = m_gBuffer.albedoImage.layout;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.clearValue = colorClearValue;
+    //----------------------------------------------
+    // Geometry Pipeline Rendering
+    //----------------------------------------------
+    {
+        // --- Color Attachments --------------------------
+        VkRenderingAttachmentInfo albedoAttachment{};
+        albedoAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        albedoAttachment.imageView = m_gBuffer.albedoImage.view;
+        albedoAttachment.imageLayout = m_gBuffer.albedoImage.layout;
+        albedoAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        albedoAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        albedoAttachment.clearValue = colorClearValue;
 
-    VkRenderingAttachmentInfo normalAttachment{};
-    normalAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    normalAttachment.imageView = m_gBuffer.normalImage.view;
-    normalAttachment.imageLayout = m_gBuffer.normalImage.layout;
-    normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        VkRenderingAttachmentInfo normalAttachment{};
+        normalAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        normalAttachment.imageView = m_gBuffer.normalImage.view;
+        normalAttachment.imageLayout = m_gBuffer.normalImage.layout;
+        normalAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        normalAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-    VkRenderingAttachmentInfo metallicRoughnessAttachment{};
-    metallicRoughnessAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    metallicRoughnessAttachment.imageView = m_gBuffer.metallicRoughnessImage.view;
-    metallicRoughnessAttachment.imageLayout = m_gBuffer.metallicRoughnessImage.layout;
-    metallicRoughnessAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    metallicRoughnessAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        VkRenderingAttachmentInfo metallicRoughnessAttachment{};
+        metallicRoughnessAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        metallicRoughnessAttachment.imageView = m_gBuffer.metallicRoughnessImage.view;
+        metallicRoughnessAttachment.imageLayout = m_gBuffer.metallicRoughnessImage.layout;
+        metallicRoughnessAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        metallicRoughnessAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-    std::vector<VkRenderingAttachmentInfo> colorAttachments{
-        colorAttachment,
-        normalAttachment,
-        metallicRoughnessAttachment
-    };
+        std::vector<VkRenderingAttachmentInfo> colorAttachments{
+            albedoAttachment,
+            normalAttachment,
+            metallicRoughnessAttachment
+        };
 
-    VkRenderingAttachmentInfo depthAttachment{};
-    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    depthAttachment.imageView = m_gBuffer.depthImage.view;
-    depthAttachment.imageLayout = m_gBuffer.depthImage.layout;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.clearValue = depthClearValue;
+        // --- Depth Attachment --------------------------
+        VkRenderingAttachmentInfo depthAttachment{};
+        depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachment.imageView = m_gBuffer.depthImage.view;
+        depthAttachment.imageLayout = m_gBuffer.depthImage.layout;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.clearValue = depthClearValue;
 
-    VkRenderingInfo renderInfo{};
-    renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    renderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
-    renderInfo.layerCount = 1;
-    renderInfo.colorAttachmentCount = colorAttachments.size();
-    renderInfo.pColorAttachments = colorAttachments.data();
-    renderInfo.pDepthAttachment = &depthAttachment;
-    renderInfo.pStencilAttachment = nullptr;
+        // --- Rendering Info --------------------------
+        VkRenderingInfo renderInfo{};
+        renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        renderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
+        renderInfo.layerCount = 1;
+        renderInfo.colorAttachmentCount = colorAttachments.size();
+        renderInfo.pColorAttachments = colorAttachments.data();
+        renderInfo.pDepthAttachment = &depthAttachment;
+        renderInfo.pStencilAttachment = nullptr;
 
-    vkCmdBeginRendering(commandBuffer.handle, &renderInfo);
+        //--- Set Up Pipeline State --------------------------
+        vkCmdBeginRendering(commandBuffer.handle, &renderInfo);
+        vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipeline.handle);
+        vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+        vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
 
-    //Bind data
-    
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipeline.handle);
-    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
+        //Render scene
+        m_scene.RecordDraw(commandBuffer, m_geometryPipeline);
 
-    //Render scene
-    m_scene.RecordDraw(commandBuffer, m_geometryPipeline);
-     
+        vkCmdEndRendering(commandBuffer.handle);
 
-    vkCmdEndRendering(commandBuffer.handle);
+        //--- Transition G Buffer images to SHADER READ ONLY --------------------------
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.metallicRoughnessImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    }
 
-    //Transition G Buffer images to SHADER READ ONLY
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.albedoImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.normalImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.depthImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_gBuffer.metallicRoughnessImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-
+    //----------------------------------------------
     // Deferred Pipeline Rendering
-    VkClearValue deferredClearValue{ .color = {1.f, 0.f, 1.f, 1.f} };
+    //----------------------------------------------
+    {
+        VkClearValue deferredClearValue{ .color = {1.f, 0.f, 1.f, 1.f} };
+
+        // --- Color Attachment --------------------------
+        VkRenderingAttachmentInfo deferredColorAttachment{};
+        deferredColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        deferredColorAttachment.imageView = m_hdrBackBuffer.view;
+        deferredColorAttachment.imageLayout = m_hdrBackBuffer.layout;
+        deferredColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        deferredColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        deferredColorAttachment.clearValue = deferredClearValue;
+
+        // --- Rendering Info --------------------------
+        VkRenderingInfo deferredRenderInfo{};
+        deferredRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        deferredRenderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
+        deferredRenderInfo.layerCount = 1;
+        deferredRenderInfo.colorAttachmentCount = 1;
+        deferredRenderInfo.pColorAttachments = &deferredColorAttachment;
+
+        // --- PushConstants --------------------------
+        LightsPC pc{ m_scene.pointLights.size(), m_scene.directionalLights.size() };
+        
+        //--- Set Up Pipeline State --------------------------
+        vkCmdBeginRendering(commandBuffer.handle, &deferredRenderInfo);
+        vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
+        vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+        vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_gBufferSet.set, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_camDataSets[currentFrame].set, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 2, 1, &m_lightsSet.set, 0, nullptr);
+        vkCmdPushConstants(commandBuffer.handle, m_deferredPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightsPC), &pc);
+        //Render fullscreen triangle
+        vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
+        vkCmdEndRendering(commandBuffer.handle);
+                       
+        //--- Transition HDR Backbuffer image to SHADER READ ONLY --------------------------
+        ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
+    }
 
 
-    VkRenderingAttachmentInfo deferredColorAttachment{};
-    deferredColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    deferredColorAttachment.imageView = m_hdrBackBuffer.view;
-    deferredColorAttachment.imageLayout = m_hdrBackBuffer.layout;
-    deferredColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    deferredColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    deferredColorAttachment.clearValue = deferredClearValue;
+    //----------------------------------------------
+    // Blitting Pass Rendering
+    //----------------------------------------------
+    {
+        // --- Color Attachment --------------------------
+        VkRenderingAttachmentInfo blittingColorAttachment{};
+        blittingColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        blittingColorAttachment.imageView = swapchainImage.view;
+        blittingColorAttachment.imageLayout = swapchainImage.layout;
+        blittingColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        blittingColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        blittingColorAttachment.clearValue = colorClearValue;
 
-    VkRenderingInfo deferredRenderInfo{};
-    deferredRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    deferredRenderInfo.renderArea = VkRect2D{ VkOffset2D{0,0}, m_swapchain.extent };
-    deferredRenderInfo.layerCount = 1;
-    deferredRenderInfo.colorAttachmentCount = 1;
-    deferredRenderInfo.pColorAttachments = &deferredColorAttachment;
-    
-    vkCmdBeginRendering(commandBuffer.handle, &deferredRenderInfo);
+        // --- Rendering Info --------------------------
+        VkRenderingInfo blittingRenderInfo{};
+        blittingRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        blittingRenderInfo.renderArea = VkRect2D{ VkOffset2D{0, 0}, m_swapchain.extent };
+        blittingRenderInfo.layerCount = 1;
+        blittingRenderInfo.colorAttachmentCount = 1;
+        blittingRenderInfo.pColorAttachments = &blittingColorAttachment;
 
-    LightsPC pc{ m_scene.pointLights.size(), m_scene.directionalLights.size() };
+        // --- PushConstants --------------------------
+        ExposurePC exposurePC{ m_camera.aperture, m_camera.ISO, m_camera.shutterSpeed };
 
-    //Bind data
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
-    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_gBufferSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_camDataSets[currentFrame].set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 2, 1, &m_lightsSet.set, 0, nullptr);
-    vkCmdPushConstants(commandBuffer.handle, m_deferredPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightsPC), &pc);
-    vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
-    vkCmdEndRendering(commandBuffer.handle);
+        //--- Set Up Pipeline State --------------------------
+        vkCmdBeginRendering(commandBuffer.handle, &blittingRenderInfo);
+        vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipeline.handle);
+        vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
+        vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
+        vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipelineLayout.handle,
+            0, 1, &m_hdrImageSet.set, 0, nullptr);
+        vkCmdPushConstants(commandBuffer.handle, m_blittingPassPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ExposurePC), &exposurePC);
+        //Render fullscreen triangle
+        vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
+        vkCmdEndRendering(commandBuffer.handle);
 
-    //Transition HDR Backbuffer image to Shader Read Only
-    ImageHelpers::TransitionImageLayout(commandBuffer, m_hdrBackBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT);
-
-    //Blitting Pass Rendering
-    VkRenderingAttachmentInfo blittingColorAttachment{};
-    blittingColorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    blittingColorAttachment.imageView = swapchainImage.view;
-    blittingColorAttachment.imageLayout = swapchainImage.layout;
-    blittingColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    blittingColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    blittingColorAttachment.clearValue = colorClearValue;
-
-    VkRenderingInfo blittingRenderInfo{};
-    blittingRenderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    blittingRenderInfo.renderArea = VkRect2D{ VkOffset2D{0, 0}, m_swapchain.extent };
-    blittingRenderInfo.layerCount = 1;
-    blittingRenderInfo.colorAttachmentCount = 1;
-    blittingRenderInfo.pColorAttachments = &blittingColorAttachment;
-
-    vkCmdBeginRendering(commandBuffer.handle, &blittingRenderInfo);
-
-    ExposurePC exposurePC{ m_camera.aperture, m_camera.ISO, m_camera.shutterSpeed };
-
-    vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipeline.handle);
-    vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
-    vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_blittingPassPipelineLayout.handle,
-        0, 1, &m_hdrImageSet.set, 0, nullptr);
-    vkCmdPushConstants(commandBuffer.handle, m_blittingPassPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ExposurePC), &exposurePC);
-    vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
-    vkCmdEndRendering(commandBuffer.handle);
-
-    //Present image memory barrier
-    ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
-        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_NONE);
+        //--- Present image memory barrier --------------------------
+        ImageHelpers::TransitionImageLayout(commandBuffer, swapchainImage, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_2_NONE,
+            VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_2_NONE);
+    }
 
     commandBuffer.End();
 }
