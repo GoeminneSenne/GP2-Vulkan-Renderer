@@ -133,8 +133,6 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		pipelineInfo.renderPass = m_renderPass->handle;
 	}
 
-	std::cout << "Before building graphics pipeline\n";
-
 	if (!m_layout) {
 		std::cerr << "GraphicsPipelineBuilder::Build ERROR: m_layout is null\n";
 		return;
@@ -160,8 +158,6 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
 		"failed to create graphics pipeline!"
 	);
-
-	std::cout << "After building graphics pipeline\n";
 
 	pipeline.layout = m_layout;
 }

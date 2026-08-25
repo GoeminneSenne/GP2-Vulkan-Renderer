@@ -22,7 +22,7 @@ namespace dae
 				.SetWidth(swapchain.extent.width)
 				.SetHeight(swapchain.extent.height)
 				.SetMipLevels(1)
-				.SetFormat(VK_FORMAT_R8G8B8A8_UNORM)
+				.SetFormat(VK_FORMAT_R8G8B8A8_SRGB)
 				.SetTiling(VK_IMAGE_TILING_OPTIMAL)
 				.SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 				.SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)

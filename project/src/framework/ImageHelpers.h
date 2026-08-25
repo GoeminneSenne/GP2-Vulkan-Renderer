@@ -135,7 +135,8 @@ namespace dae
 			vkCmdPipelineBarrier2(commandBuffer.handle, &dependencyInfo);
 		}
 
-		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, Image& image, VkImageLayout newLayout,
+		inline void TransitionImageLayout(const CommandBuffer& commandBuffer, 
+			Image& image, VkImageLayout newLayout,
 			VkPipelineStageFlags2 sourceStage, VkPipelineStageFlags2 destinationStage,
 			VkAccessFlags2 srcAccessMask, VkAccessFlags2 dstAccessMask)
 		{

@@ -29,8 +29,8 @@
 #include <framework/GpuData.h>
 #include <framework/GBuffer.h>
 
-constexpr static uint32_t WIDTH = 800;
-constexpr static uint32_t HEIGHT = 600;
+constexpr static uint32_t WIDTH = 1920;
+constexpr static uint32_t HEIGHT = 1080;
 
 const std::vector<const char*> validationLayers{ "VK_LAYER_KHRONOS_validation" };
 const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };

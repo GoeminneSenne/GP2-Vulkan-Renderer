@@ -1,5 +1,6 @@
 #include "DeferredApplication.h"
 
+#include <fstream>
 #include <framework/DescriptorSet.h>
 #include <framework/Sampler.h>
 #include <framework/Shader.h>
@@ -10,7 +11,6 @@
 #include <framework/DepthHelpers.h>
 #include <framework/Utils.h>
 #include <framework/Lights.h>
-
 
 void dae::DeferredApplication::Init()
 {
@@ -38,8 +38,6 @@ void dae::DeferredApplication::Init()
         m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
     }
 
-
-
     //----------------------------------------------
     // Scene Data
     //----------------------------------------------
@@ -48,11 +46,10 @@ void dae::DeferredApplication::Init()
         m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
         m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
-        m_scene.AddPointLight(glm::vec3{ -10.f, 0.5f, 0.f }, 300, glm::vec3(0.7f, 0.2f, 0.1f));
         m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 300.f, glm::vec3{ 0.f, 0.5f, 1.f });
         m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 850.f, glm::vec3{ 0.9f, 0.f, 0.f });
 
-        m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 100, glm::vec3(1, 1, 1));
+        m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 100, glm::vec3(0.9f, 0.9f, 0.9f));
     }
 
     //----------------------------------------------
@@ -249,7 +246,7 @@ void dae::DeferredApplication::Init()
         {
             PipelineLayoutBuilder layoutBuilder{};
             layoutBuilder
-                .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+                .AddPushConstant(0, sizeof(ModelPC), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
                 .AddDescriptorSetLayout(m_texturesSetLayout)
                 .AddDescriptorSetLayout(m_viewProjSetLayout)
                 .Build(m_context, m_geometryPipelineLayout);
@@ -263,7 +260,7 @@ void dae::DeferredApplication::Init()
             pipelineBuilder
                 .SetPipelineLayout(m_geometryPipelineLayout)
                 .UseDynamicRendering(true)
-                .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context)) //TODO change to gBuffer
+                .SetDepthAttachment(m_gBuffer.depthImage.format)
                 .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
                 .SetShader(prepassFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
                 .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
@@ -286,7 +283,7 @@ void dae::DeferredApplication::Init()
                 .AddColorAttachment(m_gBuffer.albedoImage.format)
                 .AddColorAttachment(m_gBuffer.normalImage.format)
                 .AddColorAttachment(m_gBuffer.metallicRoughnessImage.format)
-                .SetDepthAttachment(DepthHelpers::FindDepthFormat(m_context))
+                .SetDepthAttachment(m_gBuffer.depthImage.format)
                 .SetShader(vertexShader, VK_SHADER_STAGE_VERTEX_BIT)
                 .SetShader(geometryFragmentShader, VK_SHADER_STAGE_FRAGMENT_BIT)
                 .SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)

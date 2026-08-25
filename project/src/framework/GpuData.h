@@ -23,7 +23,7 @@ namespace dae
 	};
 
 	// --- Push Constants -----------------------------
-	struct PushConstants
+	struct ModelPC
 	{
 		alignas(16) glm::mat4 model{};
 		uint32_t albedoTexIndex{};

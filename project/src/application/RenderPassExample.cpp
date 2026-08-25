@@ -95,7 +95,7 @@ void dae::RenderPassExampleApplication::Init()
     {
         PipelineLayoutBuilder pipelineLayoutBuilder = {};
         pipelineLayoutBuilder
-			.AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
+			.AddPushConstant(0, sizeof(ModelPC), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.AddDescriptorSetLayout(m_globalDataSetLayout)
 			.AddDescriptorSetLayout(m_frameDataSetLayout)
             .Build(m_context, m_graphicsPipelineLayout);
