@@ -5,11 +5,9 @@
 
 #include <framework/DescriptorSet.h>
 #include <framework/Sampler.h>
-#include <framework/RenderPass.h>
 #include <framework/Shader.h>
 #include <framework/SwapchainHelpers.h>
 #include <framework/Vertex.h>
-#include <framework/Framebuffer.h>
 #include <framework/ImageHelpers.h>
 #include <framework/GLTFLoader.h>
 #include <framework/DepthHelpers.h>
@@ -19,12 +17,17 @@
 
 void dae::DeferredApplication::Init()
 {
-    // --- Window -----------------------------------
+    //----------------------------------------------
+    // Window
+    //----------------------------------------------
     {
         m_window.InitWindow(WIDTH, HEIGHT, "Vulkan Demo");
         m_applicationDeletionQueue.PushDeletor([&]() {m_window.Destroy(); });
     }
-    // --- Context ----------------------------------
+
+    //----------------------------------------------
+    // Context
+    //----------------------------------------------
     {
         ContextConfig config{
             ENABLE_VALIDATION,
@@ -37,20 +40,29 @@ void dae::DeferredApplication::Init()
         contextFactory.Create(&m_window, m_context);
         m_applicationDeletionQueue.PushDeletor([&]() {m_context.Destroy(); });
     }
-    // --- Scene Data -------------------------------
+
+
+
+    //----------------------------------------------
+    // Scene Data
+    //----------------------------------------------
     {
         GLTFLoader loader;
         m_scene = loader.LoadScene(m_context, "resources/sponza/Sponza.gltf");
         m_applicationDeletionQueue.PushDeletor([&]() {m_scene.Destroy(m_context); });
 
         m_scene.AddPointLight(glm::vec3{ -10.f, 0.5f, 0.f }, 300, glm::vec3(0.7f, 0.2f, 0.1f));
-        //m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 30.f, glm::vec3{ 0.f, 0.5f, 1.f });
-        //m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 80.f, glm::vec3{ 0.9f, 0.f, 0.f });
+        m_scene.AddPointLight(glm::vec3{ -10.f, 1.f, 0.f }, 300.f, glm::vec3{ 0.f, 0.5f, 1.f });
+        m_scene.AddPointLight(glm::vec3{ 6.f, 1.f, 0.f }, 850.f, glm::vec3{ 0.9f, 0.f, 0.f });
 
-        //m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 1, glm::vec3(1, 1, 1));
+        m_scene.AddDirectionalLight(glm::vec3(0.577f, -0.577f, -0.577f), 100, glm::vec3(1, 1, 1));
     }
-    // --- Light Buffers -------------------------------
+
+    //----------------------------------------------
+    // Light Buffers
+    //----------------------------------------------
     {
+        //--- Point Lights -------------------------
         VkDeviceSize pointLightsSize = m_scene.pointLights.empty()
             ? sizeof(PointLight)
             : sizeof(PointLight) * m_scene.pointLights.size();
@@ -74,7 +86,7 @@ void dae::DeferredApplication::Init()
         }
 
 
-        //Directional Lights
+        //--- Directional Lights -------------------------
         VkDeviceSize dirLightsSize = m_scene.directionalLights.empty()
             ? sizeof(DirectionalLight)
             : sizeof(DirectionalLight) * m_scene.directionalLights.size();
@@ -100,10 +112,79 @@ void dae::DeferredApplication::Init()
 
     }
 
-    // --- Swapchain ----------------------------------
+    //----------------------------------------------
+    // Swapchain
+    //----------------------------------------------
     {
         m_swapchain.Create(m_window, m_context);
         m_resizeDeletionQueue.PushDeletor([&]() {m_swapchain.Destroy(m_context); });
+    }
+
+    //----------------------------------------------
+    // Camera
+    //----------------------------------------------
+    {
+        m_camera.Initialize(90.f, { 0.f, 1.f, 0.f }, 0.1f, 3000.f);
+        m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
+    }
+
+    //----------------------------------------------
+    // Texture Sampler
+    //----------------------------------------------
+    {
+        SamplerBuilder samplerBuilder = {};
+        samplerBuilder
+            .SetFilter(VK_FILTER_LINEAR)
+            .SetAddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT)
+            .EnableAnisotropy(true)
+            .EnableCompare(false)
+            .SetMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
+            .SetMipLodBias(0.f)
+            .SetMinLod(0.f)
+            .SetMaxLod(VK_LOD_CLAMP_NONE)
+            .Build(m_context, m_sampler);
+
+        m_applicationDeletionQueue.PushDeletor([&]() {m_sampler.Destroy(m_context); });
+    }
+
+    //----------------------------------------------
+    // SyncManager
+    //----------------------------------------------
+    {
+        m_syncManager.Create(m_context, m_swapchain.images.size());
+        m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
+    }
+
+    //----------------------------------------------
+    // Render Command Buffers
+    //----------------------------------------------
+    m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
+
+    //----------------------------------------------
+    // Descriptor Pool
+    //----------------------------------------------
+    {
+        std::vector<VkDescriptorPoolSize> poolSizes;
+        //View Proj Sets
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+        //Camera Data Sets
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+        //Scene Textures
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
+        // GBuffer + HDR Backbuffer images
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5);
+        //Light Buffers
+        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2);
+
+        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 4);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
+    }
+
+    //----------------------------------------------
+    // Geometry Pipeline + Depth Prepass Pipeline
+    //----------------------------------------------
+    {
+
     }
 
     // --- DescriptorSetLayouts ----------------------
@@ -114,16 +195,16 @@ void dae::DeferredApplication::Init()
         //Frame data set
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-            .Build(m_context, m_frameDataSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_frameDataSetLayout.Destroy(m_context); });
+            .Build(m_context, m_viewProjSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_viewProjSetLayout.Destroy(m_context); });
 
         //Global data set
         layoutBuilder = {};
         layoutBuilder
             //Ideally this is split so you don't link the sampler for every image
             .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, m_scene.textures.size())
-            .Build(m_context, m_globalDataSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_globalDataSetLayout.Destroy(m_context); });
+            .Build(m_context, m_texturesSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_texturesSetLayout.Destroy(m_context); });
     
         //Deferred Pipeline set
         layoutBuilder = {};
@@ -132,23 +213,23 @@ void dae::DeferredApplication::Init()
 			.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
 			.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
             .AddBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1)
-            .Build(m_context, m_deferredSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredSetLayout.Destroy(m_context); });
+            .Build(m_context, m_gBufferSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_gBufferSetLayout.Destroy(m_context); });
     
         //Deferrd Camera Data sets
         layoutBuilder = {};
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_deferredCameraSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredCameraSetLayout.Destroy(m_context); });
+            .Build(m_context, m_camDataSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_camDataSetLayout.Destroy(m_context); });
     
         //Deferred Lights set
         layoutBuilder = {};
         layoutBuilder
             .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
             .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT)
-            .Build(m_context, m_deferredPointLightsSetLayout);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPointLightsSetLayout.Destroy(m_context); });
+            .Build(m_context, m_lightsSetLayout);
+        m_applicationDeletionQueue.PushDeletor([&]() {m_lightsSetLayout.Destroy(m_context); });
 
         //Blitting Pass Descriptor Set
         layoutBuilder = {};
@@ -221,8 +302,8 @@ void dae::DeferredApplication::Init()
     PipelineLayoutBuilder pipelineLayoutBuilder = {};
     pipelineLayoutBuilder
         .AddPushConstant(0, sizeof(PushConstants), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
-        .AddDescriptorSetLayout(m_globalDataSetLayout)
-        .AddDescriptorSetLayout(m_frameDataSetLayout)
+        .AddDescriptorSetLayout(m_texturesSetLayout)
+        .AddDescriptorSetLayout(m_viewProjSetLayout)
         .Build(m_context, m_geometryPipelineLayout);
 
     m_applicationDeletionQueue.PushDeletor([&]() {m_geometryPipelineLayout.Destroy(m_context); });
@@ -303,9 +384,9 @@ void dae::DeferredApplication::Init()
     {
         PipelineLayoutBuilder layoutBuilder = {};
         layoutBuilder
-            .AddDescriptorSetLayout(m_deferredSetLayout)
-            .AddDescriptorSetLayout(m_deferredCameraSetLayout)
-            .AddDescriptorSetLayout(m_deferredPointLightsSetLayout)
+            .AddDescriptorSetLayout(m_gBufferSetLayout)
+            .AddDescriptorSetLayout(m_camDataSetLayout)
+            .AddDescriptorSetLayout(m_lightsSetLayout)
             .AddPushConstant(0, sizeof(LightsPC), VK_SHADER_STAGE_FRAGMENT_BIT)
             .Build(m_context, m_deferredPipelineLayout);
         m_applicationDeletionQueue.PushDeletor([&]() {m_deferredPipelineLayout.Destroy(m_context); });
@@ -388,22 +469,6 @@ void dae::DeferredApplication::Init()
 
 
 
-    // --- Texture Sampler --------------------------
-    {
-        SamplerBuilder samplerBuilder = {};
-        samplerBuilder
-            .SetFilter(VK_FILTER_LINEAR)
-            .SetAddressMode(VK_SAMPLER_ADDRESS_MODE_REPEAT)
-            .EnableAnisotropy(true)
-            .EnableCompare(false)
-            .SetMipmapMode(VK_SAMPLER_MIPMAP_MODE_LINEAR)
-            .SetMipLodBias(0.f)
-            .SetMinLod(0.f)
-            .SetMaxLod(VK_LOD_CLAMP_NONE)
-            .Build(m_context, m_sampler);
-
-        m_applicationDeletionQueue.PushDeletor([&]() {m_sampler.Destroy(m_context); });
-    }
 
     // --- Uniform Buffers --------------------------
     {
@@ -416,70 +481,59 @@ void dae::DeferredApplication::Init()
             m_applicationDeletionQueue.PushDeletor([&, i]() {m_viewProjUBOs[i].Destroy(m_context); });
         }
 
-        m_deferredCameraDataUBOs.resize(MAX_FRAMES_IN_FLIGHT);
+        m_camDataUBOs.resize(MAX_FRAMES_IN_FLIGHT);
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             VkDeviceSize bufferSize = sizeof(CameraDataUBO);
-            BufferHelpers::CreateUniform(m_context, m_deferredCameraDataUBOs[i], bufferSize);
-            m_applicationDeletionQueue.PushDeletor([&, i]() {m_deferredCameraDataUBOs[i].Destroy(m_context);});
+            BufferHelpers::CreateUniform(m_context, m_camDataUBOs[i], bufferSize);
+            m_applicationDeletionQueue.PushDeletor([&, i]() {m_camDataUBOs[i].Destroy(m_context);});
         }
     }
-    // --- Descriptor Pool --------------------------
-    {
-        std::vector<VkDescriptorPoolSize> poolSizes;
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(m_scene.textures.size()));
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 5); //GBuffer + HDR backbuffer image
-        poolSizes.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2);
 
-        m_descriptorPool.Create(m_context, poolSizes, 2 * MAX_FRAMES_IN_FLIGHT + 4);
-        m_applicationDeletionQueue.PushDeletor([&]() {m_descriptorPool.Destroy(m_context); });
-    }
 
     // --- Descriptor Sets --------------------------
     {
         //global descriptor set
-        m_globalDescriptorSet = m_descriptorPool.Allocate(m_context, m_globalDataSetLayout);
+        m_texturesSet = m_descriptorPool.Allocate(m_context, m_texturesSetLayout);
 
         DescriptorSetWriter globalWriter{};
         globalWriter
-            .SetTarget(&m_globalDescriptorSet)
+            .SetTarget(&m_texturesSet)
             .WriteImageArray(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_scene.textures, m_sampler)
             .UpdateTarget(m_context);
 
         //frame descriptor set
-        m_frameDescriptorSets = m_descriptorPool.Allocate(m_context, m_frameDataSetLayout, MAX_FRAMES_IN_FLIGHT);
+        m_viewProjSets = m_descriptorPool.Allocate(m_context, m_viewProjSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             DescriptorSetWriter writer = {};
             writer
-                .SetTarget(&m_frameDescriptorSets[i])
+                .SetTarget(&m_viewProjSets[i])
                 .WriteBuffer(0, m_viewProjUBOs[i], 0, sizeof(ViewProjectionUBO))
                 .UpdateTarget(m_context);
         }
 
         //deferred descriptor set
-        m_deferredDescriptorSet = m_descriptorPool.Allocate(m_context, m_deferredSetLayout);
+        m_gBufferSet = m_descriptorPool.Allocate(m_context, m_gBufferSetLayout);
 
         DescriptorSetWriter deferredWriter{};
         deferredWriter
-            .SetTarget(&m_deferredDescriptorSet)
+            .SetTarget(&m_gBufferSet)
             .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
 			.WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
 			.WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
             .WriteImage(3, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.metallicRoughnessImage, m_sampler)
             .UpdateTarget(m_context);
 
-        m_deferredCameraSets = m_descriptorPool.Allocate(m_context, m_deferredCameraSetLayout, MAX_FRAMES_IN_FLIGHT);
+        m_camDataSets = m_descriptorPool.Allocate(m_context, m_camDataSetLayout, MAX_FRAMES_IN_FLIGHT);
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
             DescriptorSetWriter writer = {};
             writer
-                .SetTarget(&m_deferredCameraSets[i])
-                .WriteBuffer(0, m_deferredCameraDataUBOs[i], 0, sizeof(CameraDataUBO))
+                .SetTarget(&m_camDataSets[i])
+                .WriteBuffer(0, m_camDataUBOs[i], 0, sizeof(CameraDataUBO))
                 .UpdateTarget(m_context);
         }
 
@@ -493,33 +547,30 @@ void dae::DeferredApplication::Init()
             .UpdateTarget(m_context);
     
         //Point Lights set
-        m_deferredPointLightsSet = m_descriptorPool.Allocate(m_context, m_deferredPointLightsSetLayout);
+        m_lightsSet = m_descriptorPool.Allocate(m_context, m_lightsSetLayout);
         writer = {};
         writer
-            .SetTarget(&m_deferredPointLightsSet)
+            .SetTarget(&m_lightsSet)
             .WriteBuffer(0, m_pointLightsBuffer, 0, VK_WHOLE_SIZE)
             .UpdateTarget(m_context);
 
         writer = {};
         writer
-            .SetTarget(&m_deferredPointLightsSet)
+            .SetTarget(&m_lightsSet)
             .WriteBuffer(1, m_dirLightsBuffer, 0, VK_WHOLE_SIZE)
             .UpdateTarget(m_context);
     }
 
     // --- Sync Manager -----------------------------
     {
-        m_syncManager.Create(m_context, m_swapchain.images.size());
-        m_applicationDeletionQueue.PushDeletor([&]() {m_syncManager.Destroy(m_context); });
+
     }
 
     // --- Camera -----------------------------
     {
-        m_camera.Initialize(90.f, { 0.f, 1.f, 0.f }, 0.1f, 3000.f);
-        m_camera.CalculateProjectionMatrix(m_swapchain.extent.width, m_swapchain.extent.height);
+
     }
 
-    m_renderCommandBuffers = m_context.commandPool.Allocate(MAX_FRAMES_IN_FLIGHT);
 
 }
 
@@ -699,7 +750,7 @@ void dae::DeferredApplication::HandleResize()
 
     DescriptorSetWriter writer{};
     writer
-        .SetTarget(&m_deferredDescriptorSet)
+        .SetTarget(&m_gBufferSet)
         .WriteImage(0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.albedoImage, m_sampler)
         .WriteImage(1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.depthImage, m_sampler)
         .WriteImage(2, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_gBuffer.normalImage, m_sampler)
@@ -810,8 +861,8 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_prepassPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
 
     //Render scene
     m_scene.RecordDraw(commandBuffer, m_prepassPipeline);
@@ -879,8 +930,8 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_globalDescriptorSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_frameDescriptorSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 0, 1, &m_texturesSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_geometryPipelineLayout.handle, 1, 1, &m_viewProjSets[currentFrame].set, 0, nullptr);
 
     //Render scene
     m_scene.RecordDraw(commandBuffer, m_geometryPipeline);
@@ -929,9 +980,9 @@ void dae::DeferredApplication::RecordRenderCommandBuffer(CommandBuffer& commandB
     vkCmdBindPipeline(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipeline.handle);
     vkCmdSetViewport(commandBuffer.handle, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer.handle, 0, 1, &scissor);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_deferredDescriptorSet.set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_deferredCameraSets[currentFrame].set, 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 2, 1, &m_deferredPointLightsSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 0, 1, &m_gBufferSet.set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 1, 1, &m_camDataSets[currentFrame].set, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer.handle, VK_PIPELINE_BIND_POINT_GRAPHICS, m_deferredPipelineLayout.handle, 2, 1, &m_lightsSet.set, 0, nullptr);
     vkCmdPushConstants(commandBuffer.handle, m_deferredPipelineLayout.handle, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(LightsPC), &pc);
     vkCmdDraw(commandBuffer.handle, 3, 1, 0, 0);
     vkCmdEndRendering(commandBuffer.handle);
@@ -994,5 +1045,5 @@ void dae::DeferredApplication::UpdateViewProjectionUBO(uint32_t currentImage)
         .resolution = glm::ivec2(m_swapchain.extent.width, m_swapchain.extent.height)
     };
 
-    memcpy(m_deferredCameraDataUBOs[currentImage].mappedData, &camData, sizeof(camData));
+    memcpy(m_camDataUBOs[currentImage].mappedData, &camData, sizeof(camData));
 }

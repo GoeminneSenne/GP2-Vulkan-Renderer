@@ -47,44 +47,57 @@ namespace dae
         void Cleanup();
 
     private:
-
         void HandleResize();
         void RecordRenderCommandBuffer(CommandBuffer& commandBuffer, uint32_t imageIndex);
         void UpdateViewProjectionUBO(uint32_t currentImage);
 
+        //--- General Members ------------------------------
         Window m_window{};
         Timer m_timer{};
         Camera m_camera{};
-
         Context m_context{};
-
         Swapchain m_swapchain{};
-
-        DescriptorSetLayout m_frameDataSetLayout{};
-        DescriptorSetLayout m_globalDataSetLayout{};
+        std::vector<CommandBuffer> m_renderCommandBuffers;
         DescriptorPool m_descriptorPool;
-        DescriptorSet m_globalDescriptorSet{};
-        std::vector<DescriptorSet> m_frameDescriptorSets;
+        SyncManager m_syncManager{};
+        Scene m_scene{};
+        Sampler m_sampler{};
+        GBuffer m_gBuffer{};
+        DeletionQueue m_applicationDeletionQueue{};
+        DeletionQueue m_resizeDeletionQueue{};
 
+
+        //--- Geometry Pipeline -----------------------------
         PipelineLayout m_geometryPipelineLayout{};
         GraphicsPipeline m_geometryPipeline{};
         GraphicsPipeline m_prepassPipeline{};
 
-        DescriptorSetLayout m_deferredSetLayout{};
-        DescriptorSet m_deferredDescriptorSet{};
+        //Global Data
+        DescriptorSetLayout m_texturesSetLayout{};
+        DescriptorSet m_texturesSet{};
+
+        //Frame Specific Data
+        DescriptorSetLayout m_viewProjSetLayout{};
+        std::vector<DescriptorSet> m_viewProjSets{};
+        std::vector<UniformBuffer> m_viewProjUBOs;
+
+        //--- Deferred Pipeline -----------------------------
         PipelineLayout m_deferredPipelineLayout{};
         GraphicsPipeline m_deferredPipeline{};
 
-        DescriptorSetLayout m_deferredCameraSetLayout{};
-        std::vector<DescriptorSet> m_deferredCameraSets{};
-        std::vector<UniformBuffer> m_viewProjUBOs;
+        DescriptorSetLayout m_gBufferSetLayout{};
+        DescriptorSet m_gBufferSet{};
 
-        DescriptorSetLayout m_deferredPointLightsSetLayout{};
-        DescriptorSet m_deferredPointLightsSet{};
+        DescriptorSetLayout m_camDataSetLayout{};
+        std::vector<DescriptorSet> m_camDataSets{};
+        std::vector<UniformBuffer> m_camDataUBOs;
+
+        DescriptorSetLayout m_lightsSetLayout{};
+        DescriptorSet m_lightsSet{};
         Buffer m_pointLightsBuffer{};
         Buffer m_dirLightsBuffer{};
 
-        //Blitting Pass
+        //--- Blitting Pass -------------------------------
         Image m_hdrBackBuffer{};
 
         PipelineLayout m_blittingPassPipelineLayout{};
@@ -92,21 +105,6 @@ namespace dae
         DescriptorSetLayout m_blittingPassSetLayout{};
         DescriptorSet m_blittingPassSet{};
 
-        std::vector<CommandBuffer> m_renderCommandBuffers;
 
-        SyncManager m_syncManager{};
-
-        Scene m_scene{};
-
-
-
-        std::vector<UniformBuffer> m_deferredCameraDataUBOs;
-
-        Sampler m_sampler{};
-
-        GBuffer m_gBuffer{};
-
-        DeletionQueue m_applicationDeletionQueue{};
-        DeletionQueue m_resizeDeletionQueue{};
     };
 }

@@ -9,7 +9,9 @@ layout(set = 1, binding = 0) uniform ViewProj
 layout(push_constant) uniform constants
 {
 	mat4 model;
-	uint textureIndex;
+	uint albedoTexIndex;
+	uint normalTexIndex;
+	uint metallicRoughnessTexIndex;
 } pushConstants;
 
 layout(location = 0) in vec3 inPosition;
