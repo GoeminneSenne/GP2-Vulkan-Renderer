@@ -18,7 +18,7 @@ void dae::DeferredApplication::Init()
     // Window
     //----------------------------------------------
     {
-        m_window.InitWindow(WIDTH, HEIGHT, "Vulkan Demo");
+        m_window.InitWindow(WIDTH, HEIGHT, "Deferred Rendering Application");
         m_applicationDeletionQueue.PushDeletor([&]() {m_window.Destroy(); });
     }
 

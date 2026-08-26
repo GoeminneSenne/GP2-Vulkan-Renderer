@@ -141,8 +141,8 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		std::cerr << "GraphicsPipelineBuilder::Build ERROR: m_renderPass is null and dynamic rendering disabled\n";
 		return;
 	}
-	std::cout << "shader stage count: " << m_shaderStages.size() << '\n';
 
+#ifndef NDEBUG
 	std::cout << "layout handle: " << (m_layout ? m_layout->handle : VK_NULL_HANDLE)
 		<< " renderPass: " << (m_renderPass ? m_renderPass->handle : VK_NULL_HANDLE)
 		<< " stageCount: " << pipelineInfo.stageCount
@@ -153,6 +153,7 @@ void dae::GraphicsPipelineBuilder::Build(const Context& context, GraphicsPipelin
 		<< " colorAttachCount: " << colorBlending.attachmentCount
 		<< " pColorAtt: " << colorBlending.pAttachments
 		<< '\n';
+#endif
 
 	LOG_VULKAN_ERROR(
 		vkCreateGraphicsPipelines(context.logicalDevice.handle, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline.handle),
