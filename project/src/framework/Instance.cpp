@@ -19,8 +19,6 @@ void dae::Instance::Destroy()
 
 void dae::InstanceBuilder::Build(Instance& instance)
 {
-	std::cout << "Instance Build\n";
-
 	if (m_useValidation && !CheckValidationLayerSupport())
 		throw std::runtime_error("Validation layers requested, but not available");
 
@@ -62,14 +60,11 @@ void dae::InstanceBuilder::Build(Instance& instance)
 	assert(createInfo.pNext == nullptr ||
 		((VkBaseInStructure*)createInfo.pNext)->sType == VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT);
 
-	std::cout << "Before build call\n";
-
 	LOG_VULKAN_ERROR(
 		vkCreateInstance(&createInfo, nullptr, &instance.handle),
 		"failed to create instance!"
 	);
 
-	std::cout << "After build call\n";
 
 	//DEBUG MESSENGER
 	/////////////////////

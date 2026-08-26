@@ -39,9 +39,11 @@ dae::Scene dae::GLTFLoader::LoadScene(const Context& context, const std::string&
 	outScene.rootNode = ProcessNode(context, scene->mRootNode, scene, outScene);
 	auto& rootTransform = outScene.nodes[outScene.rootNode].transform;
 
+#ifndef NDEBUG
 	std::cout << "Scene has " <<  scene->mNumMeshes << " meshes" << "\n";
 	std::cout << "Scene has " <<  scene->mNumMaterials << " materials" << "\n";
 	std::cout << "Scene has " << outScene.textures.size() << " textures\n";
+#endif
 
 	return outScene;
 }
