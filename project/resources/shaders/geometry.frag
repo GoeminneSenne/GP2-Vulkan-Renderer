@@ -23,6 +23,9 @@ layout(push_constant) uniform constants
 	uint metallicRoughnessTexIndex;
 } pushConstants;
 
+const float PI = 3.14159265359;
+
+vec2 encodeNormal(vec3 normal);
 
 void main() 
 {
@@ -50,7 +53,8 @@ void main()
 	sampledNormal = tangentSpaceAxis * sampledNormal;
 	sampledNormal = normalize(sampledNormal);
 
-	outNormal = sampledNormal;
+	//Encoding
+	outNormal.xy = encodeNormal(sampledNormal);
 	
 	//Metallic and Roughness
 	vec4 metalRoughTex = texture(texSamplers[pushConstants.metallicRoughnessTexIndex], fragTexCoord);
@@ -60,4 +64,13 @@ void main()
 
 	outMetallicRoughness.g = roughness;
 	outMetallicRoughness.b = metallic;
+}
+
+//Encodes normal to 2 channel spherical coordinates
+vec2 encodeNormal(vec3 normal)
+{
+	normal = normalize(normal);
+	float ang = atan(normal.y, normal.x) / PI;
+	float z = normal.z;
+	return vec2(ang, z);
 }

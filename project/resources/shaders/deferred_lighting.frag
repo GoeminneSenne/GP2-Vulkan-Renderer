@@ -58,6 +58,8 @@ float GeometrySchlickGGX(float NdotV, float roughness);
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
 
+vec3 DecodeNormal(vec2 enc);
+
 void main()
 {
 	const ivec2 texelCoord = ivec2(texCoord * vec2(textureSize(gDepth, 0)));
@@ -71,7 +73,9 @@ void main()
 	float metallic = texture(gMetallicRougness, texCoord).b;
 	float roughness = texture(gMetallicRougness, texCoord).g;
 	
-	vec3 N = normalize(texture(gNormal, texCoord).rgb);
+	vec2 encodedNormal = texture(gNormal, texCoord).xy;	
+	vec3 N = DecodeNormal(encodedNormal);
+
 	vec3 V = normalize(camData.camPos.xyz - worldPosition);
 
 	vec3 F0 = vec3(0.04);
@@ -92,7 +96,6 @@ void main()
 		const float illuminance = luminousIntensity * attentuation;
 		const vec3 irradiance = light.color * illuminance;
 	
-		//vec3 L = gLightDirection;
 		vec3 L = normalize(light.position - worldPosition);
 		vec3 H = normalize(V + L);
 	
@@ -205,4 +208,13 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     float ggx1  = GeometrySchlickGGX(NdotL, roughness);
 	
     return ggx1 * ggx2;
+}
+
+//Decode Spherical Encoded Normal (ang, z) to (x,y,z)
+vec3 DecodeNormal(vec2 enc)
+{
+	float ang = enc.x * PI;
+	float z = enc.y;
+	float r = sqrt(max(1.0 - z * z, 0.0));
+	return normalize(vec3(cos(ang) * r, sin(ang) * r, z));
 }
