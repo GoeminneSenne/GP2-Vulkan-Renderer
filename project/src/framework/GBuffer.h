@@ -36,7 +36,7 @@ namespace dae
 				.SetWidth(swapchain.extent.width)
 				.SetHeight(swapchain.extent.height)
 				.SetMipLevels(1)
-				.SetFormat(VK_FORMAT_R16G16B16A16_SFLOAT)
+				.SetFormat(VK_FORMAT_R16G16_SFLOAT)
 				.SetTiling(VK_IMAGE_TILING_OPTIMAL)
 				.SetUsageFlags(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)
 				.SetAspectMask(VK_IMAGE_ASPECT_COLOR_BIT)

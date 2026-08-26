@@ -12,7 +12,7 @@ layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec3 fragTangent;
 
 layout(location = 0) out vec4 outColor;
-layout(location = 1) out vec3 outNormal;
+layout(location = 1) out vec2 outNormal;
 layout(location = 2) out vec3 outMetallicRoughness;
 
 layout(push_constant) uniform constants
@@ -53,8 +53,7 @@ void main()
 	sampledNormal = tangentSpaceAxis * sampledNormal;
 	sampledNormal = normalize(sampledNormal);
 
-	//Encoding
-	outNormal.xy = encodeNormal(sampledNormal);
+	outNormal = encodeNormal(sampledNormal);
 	
 	//Metallic and Roughness
 	vec4 metalRoughTex = texture(texSamplers[pushConstants.metallicRoughnessTexIndex], fragTexCoord);
